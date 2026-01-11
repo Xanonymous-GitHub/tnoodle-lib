@@ -16,13 +16,6 @@ object Frameworks {
     }
 
     fun Project.configureJUnit5() {
-        val libs = the<LibrariesForLibs>()
-
-        dependencies {
-            add("testImplementation", libs.junit.jupiter.api)
-            add("testRuntimeOnly", libs.junit.jupiter.engine)
-        }
-
         tasks.withType<Test> {
             useJUnitPlatform()
 
