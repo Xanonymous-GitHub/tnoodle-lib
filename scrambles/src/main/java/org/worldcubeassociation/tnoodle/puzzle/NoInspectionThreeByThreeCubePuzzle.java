@@ -3,8 +3,9 @@ package org.worldcubeassociation.tnoodle.puzzle;
 import static org.worldcubeassociation.tnoodle.puzzle.NoInspectionFiveByFiveCubePuzzle.applyOrientation;
 
 import java.util.Random;
-import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
+
 import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
 
 @Export
 public class NoInspectionThreeByThreeCubePuzzle extends ThreeByThreeCubePuzzle {
@@ -17,7 +18,7 @@ public class NoInspectionThreeByThreeCubePuzzle extends ThreeByThreeCubePuzzle {
         CubeMove[][] randomOrientationMoves = getRandomOrientationMoves(size / 2);
         CubeMove[] randomOrientation = randomOrientationMoves[r.nextInt(randomOrientationMoves.length)];
         String firstAxisRestriction;
-        if(randomOrientation.length > 0) {
+        if (randomOrientation.length > 0) {
             Face restrictedFace = randomOrientation[0].face;
             // Restrictions are for an entire axis, so this will also
             // prevent the opposite of restrictedFace from being the first

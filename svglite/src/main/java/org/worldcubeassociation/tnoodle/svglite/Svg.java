@@ -2,7 +2,9 @@ package org.worldcubeassociation.tnoodle.svglite;
 
 public class Svg extends Element {
 
-    private double originOffsetX, originOffsetY;
+    private final double originOffsetX;
+    private final double originOffsetY;
+
     public Svg(Dimension size) {
         super("svg");
         setSize(size);
@@ -12,16 +14,16 @@ public class Svg extends Element {
         originOffsetY = 0;
     }
 
-    public void setSize(Dimension size) {
-        setAttribute("width", "" + size.width + "px");
-        setAttribute("height", "" + size.height + "px");
-        setAttribute("viewBox", "0 0 " + size.width + " " + size.height);
-    }
-
     public Dimension getSize() {
         int width = Integer.parseInt(getAttribute("width").replace("px", ""));
         int height = Integer.parseInt(getAttribute("height").replace("px", ""));
         return new Dimension(width, height);
+    }
+
+    public void setSize(Dimension size) {
+        setAttribute("width", size.width + "px");
+        setAttribute("height", size.height + "px");
+        setAttribute("viewBox", "0 0 " + size.width + " " + size.height);
     }
 
 }

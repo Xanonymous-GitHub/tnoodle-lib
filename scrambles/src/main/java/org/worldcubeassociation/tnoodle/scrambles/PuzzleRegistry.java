@@ -1,6 +1,19 @@
 package org.worldcubeassociation.tnoodle.scrambles;
 
-import org.worldcubeassociation.tnoodle.puzzle.*;
+import org.worldcubeassociation.tnoodle.puzzle.ClockPuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.FourByFourCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.FourByFourRandomTurnsCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.MegaminxPuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.NoInspectionFiveByFiveCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.NoInspectionFourByFourCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.NoInspectionThreeByThreeCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.PyraminxPuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.SkewbPuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.SquareOnePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubeFewestMovesPuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.TwoByTwoCubePuzzle;
 
 public enum PuzzleRegistry {
     TWO(TwoByTwoCubePuzzle.class),

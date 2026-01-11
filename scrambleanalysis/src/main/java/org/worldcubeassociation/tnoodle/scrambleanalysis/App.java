@@ -1,15 +1,15 @@
 package org.worldcubeassociation.tnoodle.scrambleanalysis;
 
+import java.util.List;
+
 import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 
-import java.util.List;
-
 public class App {
 
-    public static void main(String[] args)
-        throws InvalidScrambleException, RepresentationException {
+    static void main(String[] args)
+    throws InvalidScrambleException, RepresentationException {
 
         // to test your set of scrambles
         // ArrayList<String> scrambles = ScrambleProvider.getScrambles(fileName);

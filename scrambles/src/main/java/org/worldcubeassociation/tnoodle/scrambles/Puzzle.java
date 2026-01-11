@@ -1,36 +1,42 @@
 package org.worldcubeassociation.tnoodle.scrambles;
 
-import org.worldcubeassociation.tnoodle.svglite.Color;
-import org.worldcubeassociation.tnoodle.svglite.Dimension;
-import org.worldcubeassociation.tnoodle.svglite.InvalidHexColorException;
-import org.worldcubeassociation.tnoodle.svglite.Svg;
-import org.worldcubeassociation.tnoodle.svglite.Group;
-import org.worldcubeassociation.tnoodle.svglite.Element;
+import static java.lang.Math.ceil;
+
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder.MergingMode;
 
 import org.timepedia.exporter.client.Export;
 import org.timepedia.exporter.client.ExportClosure;
 import org.timepedia.exporter.client.Exportable;
 import org.timepedia.exporter.client.NoExport;
-
-import static java.lang.Math.ceil;
+import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder.MergingMode;
+import org.worldcubeassociation.tnoodle.svglite.Color;
+import org.worldcubeassociation.tnoodle.svglite.Dimension;
+import org.worldcubeassociation.tnoodle.svglite.Element;
+import org.worldcubeassociation.tnoodle.svglite.Group;
+import org.worldcubeassociation.tnoodle.svglite.InvalidHexColorException;
+import org.worldcubeassociation.tnoodle.svglite.Svg;
 
 /**
  * Puzzle and TwistyPuzzle encapsulate all the information to filter out
  * scrambles &lt;= wcaMinScrambleDistance (defaults to 1)
  * move away from solved (see generateWcaScramble),
  * and to generate random turn scrambles generically (see generateRandomMoves).
- *
+ * <p>
  * The original proposal for these classes is accessible here:
- * https://docs.google.com/document/d/11ZfQPxAw0EhNNwE1yn5lZUO383qvAH6kJa2s3O9_6Zg/edit
+ * <a href="https://docs.google.com/document/d/11ZfQPxAw0EhNNwE1yn5lZUO383qvAH6kJa2s3O9_6Zg/edit">...</a>
  *
  * @author jeremy
  *
@@ -38,6 +44,57 @@ import static java.lang.Math.ceil;
 @ExportClosure
 public abstract class Puzzle implements Exportable {
     private static final Logger l = Logger.getLogger(Puzzle.class.getName());
+
+    public static SecureRandom getSecureRandom() {
+        try {
+            try {
+                return SecureRandom.getInstance("SHA1PRNG", "SUN");
+            } catch (NoSuchProviderException e) {
+                l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
+                return SecureRandom.getInstance("SHA1PRNG");
+            }
+        } catch (NoSuchAlgorithmException e) {
+            l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static int[] cloneArr(int[] src) {
+        int[] dest = new int[src.length];
+        System.arraycopy(src, 0, dest, 0, src.length);
+        return dest;
+    }
+
+    public static void deepCopy(int[][] src, int[][] dest) {
+        for (int i = 0; i < src.length; i++) {
+            System.arraycopy(src[i], 0, dest[i], 0, src[i].length);
+        }
+    }
+
+    public static void deepCopy(int[][][] src, int[][][] dest) {
+        for (int i = 0; i < src.length; i++) {
+            deepCopy(src[i], dest[i]);
+        }
+    }
+
+    public static <H> H choose(Random r, Iterable<H> keySet) {
+        H chosen = null;
+        int count = 0;
+        for (H element : keySet) {
+            if (r.nextInt(++count) == 0) {
+                chosen = element;
+            }
+        }
+        assert count > 0;
+        return chosen;
+    }
+
+    public static int[] copyOfRange(int[] src, int from, int to) {
+        int[] dest = new int[to - from];
+        System.arraycopy(src, from, dest, 0, dest.length);
+        return dest;
+    }
+    private final SecureRandom r = getSecureRandom();
     protected int wcaMinScrambleDistance = 2;
 
     /**
@@ -91,7 +148,7 @@ public abstract class Puzzle implements Exportable {
         PuzzleStateAndGenerator psag;
         do {
             psag = generateRandomMoves(r);
-        } while(psag.state.solveIn(wcaMinScrambleDistance - 1) != null);
+        } while (psag.state.solveIn(wcaMinScrambleDistance - 1) != null);
         return psag.generator;
     }
 
@@ -102,31 +159,17 @@ public abstract class Puzzle implements Exportable {
 
     private String[] generateScrambles(Random r, int count) {
         String[] scrambles = new String[count];
-        for(int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++) {
             scrambles[i] = generateWcaScramble(r);
         }
         return scrambles;
-    }
-
-    private SecureRandom r = getSecureRandom();
-    public static final SecureRandom getSecureRandom() {
-        try {
-            try {
-                return SecureRandom.getInstance("SHA1PRNG", "SUN");
-            } catch(NoSuchProviderException e) {
-                l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
-                return SecureRandom.getInstance("SHA1PRNG");
-            }
-        } catch(NoSuchAlgorithmException e) {
-            l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
-            throw new RuntimeException(e);
-        }
     }
 
     @Export
     public final String generateScramble() {
         return generateWcaScramble(r);
     }
+
     @Export
     public final String[] generateScrambles(int count) {
         return generateScrambles(r, count);
@@ -142,6 +185,7 @@ public abstract class Puzzle implements Exportable {
     public final String generateSeededScramble(String seed) {
         return generateSeededScramble(seed.getBytes());
     }
+
     @Export
     public final String[] generateSeededScrambles(String seed, int count) {
         return generateSeededScrambles(seed.getBytes(), count);
@@ -159,6 +203,7 @@ public abstract class Puzzle implements Exportable {
         r.setSeed(seed);
         return generateWcaScramble(r);
     }
+
     private String[] generateSeededScrambles(byte[] seed, int count) {
         // We must create our own Random because
         // other threads can access the static one.
@@ -195,28 +240,28 @@ public abstract class Puzzle implements Exportable {
      */
     public Map<String, Color> parseColorScheme(String scheme) {
         Map<String, Color> colorScheme = getDefaultColorScheme();
-        if(scheme != null && !scheme.isEmpty()) {
+        if (scheme != null && !scheme.isEmpty()) {
             String[] faces = getFaceNames();
             String[] colors;
-            if(scheme.indexOf(',') > 0) {
+            if (scheme.indexOf(',') > 0) {
                 colors = scheme.split(",");
             } else {
                 char[] cols = scheme.toCharArray();
                 colors = new String[cols.length];
-                for(int i = 0; i < cols.length; i++) {
+                for (int i = 0; i < cols.length; i++) {
                     colors[i] = cols[i] + "";
                 }
             }
-            if(colors.length != faces.length) {
+            if (colors.length != faces.length) {
 //              sendText(t, String.format("Incorrect number of colors specified (expecting %d, got %d)", faces.length, colors.length));
                 //TODO - exception
                 return null;
             }
-            for(int i = 0; i < colors.length; i++) {
+            for (int i = 0; i < colors.length; i++) {
                 try {
                     Color c = new Color(colors[i]);
                     colorScheme.put(faces[i], c);
-                } catch(InvalidHexColorException e) {
+                } catch (InvalidHexColorException e) {
 //                  sendText(t, "Invalid color: " + colors[i]);
                     //TODO - exception
                     return null;
@@ -228,20 +273,21 @@ public abstract class Puzzle implements Exportable {
 
     /**
      * Draws scramble as an Svg.
+     *
      * @param scramble The scramble to validate and apply to the puzzle. NOTE: May be null.
      * @param colorScheme A HashMap mapping face names to Colors.
-     *          Any missing entries will be merged with the defaults from getDefaultColorScheme().
-     *          If null, just the defaults are used.
-     * @return An SVG object representing the drawn scramble.
+     * Any missing entries will be merged with the defaults from getDefaultColorScheme().
+     * If null, just the defaults are used.
+     *
      * @throws InvalidScrambleException If scramble is invalid.
      */
-    public Svg drawScramble(String scramble, Map<String, Color> colorScheme) throws InvalidScrambleException {
-        if(scramble == null) {
+    public void drawScramble(String scramble, Map<String, Color> colorScheme) throws InvalidScrambleException {
+        if (scramble == null) {
             scramble = "";
         }
         Map<String, Color> colorSchemeCopy = colorScheme;
         colorScheme = getDefaultColorScheme();
-        if(colorSchemeCopy != null) {
+        if (colorSchemeCopy != null) {
             colorScheme.putAll(colorSchemeCopy);
         }
 
@@ -254,12 +300,11 @@ public abstract class Puzzle implements Exportable {
         // See http://stackoverflow.com/questions/7589650/drawing-grid-with-jquery-svg-produces-2px-lines-instead-of-1px
         Group g = new Group();
         List<Element> children = svg.getChildren();
-        while(!children.isEmpty()) {
-            g.appendChild(children.remove(0));
+        while (!children.isEmpty()) {
+            g.appendChild(children.removeFirst());
         }
         g.translate(0.5, 0.5);
         svg.appendChild(g);
-        return svg;
     }
 
     public abstract Dimension getPreferredSize();
@@ -272,23 +317,283 @@ public abstract class Puzzle implements Exportable {
      */
     @Export
     public Dimension getPreferredSize(int maxWidth, int maxHeight) {
-        if(maxWidth == 0 && maxHeight == 0) {
+        if (maxWidth == 0 && maxHeight == 0) {
             return getPreferredSize();
         }
-        if(maxWidth == 0) {
+        if (maxWidth == 0) {
             maxWidth = Integer.MAX_VALUE;
-        } else if(maxHeight == 0) {
+        } else if (maxHeight == 0) {
             maxHeight = Integer.MAX_VALUE;
         }
         double ratio = 1.0 * getPreferredSize().width / getPreferredSize().height;
-        int resultWidth = (int) Math.min(maxWidth, ceil(maxHeight*ratio));
-        int resultHeight = (int) Math.min(maxHeight, ceil(maxWidth/ratio));
+        int resultWidth = (int) Math.min(maxWidth, ceil(maxHeight * ratio));
+        int resultHeight = (int) Math.min(maxHeight, ceil(maxWidth / ratio));
         return new Dimension(resultWidth, resultHeight);
+    }
+
+    protected String solveIn(PuzzleState ps, int n) {
+        if (ps.isSolved()) {
+            return "";
+        }
+
+        Map<PuzzleState, Integer> seenSolved = new HashMap<>();
+        SortedBuckets<PuzzleState> fringeSolved = new SortedBuckets<>();
+        Map<PuzzleState, Integer> seenScrambled = new HashMap<>();
+        SortedBuckets<PuzzleState> fringeScrambled = new SortedBuckets<>();
+
+        // We're only interested in solutions of cost <= n
+        int bestIntersectionCost = n + 1;
+        PuzzleState bestIntersection = null;
+
+        PuzzleState solvedNormalized = getSolvedState().getNormalized();
+        fringeSolved.add(solvedNormalized, 0);
+        seenSolved.put(solvedNormalized, 0);
+        fringeScrambled.add(ps.getNormalized(), 0);
+        seenScrambled.put(ps.getNormalized(), 0);
+
+        int fringeTies = 0;
+
+        // The task here is to do a breadth-first search starting from both the solved state and the scrambled state.
+        // When we got an intersection from the two hash maps, we are done!
+        int minFringeScrambled = -1, minFringeSolved = -1;
+        while (!fringeSolved.isEmpty() || !fringeScrambled.isEmpty()) {
+            // We have to choose on which side we are extending our search.
+            // I'm choosing the non empty fringe with the node nearest
+            // its origin. In the event of a tie, we make sure to alternate.
+            if (!fringeScrambled.isEmpty()) {
+                minFringeScrambled = fringeScrambled.smallestValue();
+            }
+            if (!fringeSolved.isEmpty()) {
+                minFringeSolved = fringeSolved.smallestValue();
+            }
+            boolean extendSolved;
+            if (fringeSolved.isEmpty() || fringeScrambled.isEmpty()) {
+                // If the solved fringe is not empty, we'll expand it.
+                // Otherwise, we're expanding the scrambled fringe.
+                extendSolved = !fringeSolved.isEmpty();
+            } else {
+                if (minFringeSolved < minFringeScrambled) {
+                    extendSolved = true;
+                } else if (minFringeSolved > minFringeScrambled) {
+                    extendSolved = false;
+                } else {
+                    extendSolved = (fringeTies++) % 2 == 0;
+                }
+            }
+
+            // We are using references for a more concise code.
+            Map<PuzzleState, Integer> seenExtending;
+            SortedBuckets<PuzzleState> fringeExtending;
+            Map<PuzzleState, Integer> seenComparing;
+            SortedBuckets<PuzzleState> fringeComparing;
+            int minExtendingFringe, minComparingFringe;
+            if (extendSolved) {
+                seenExtending = seenSolved;
+                fringeExtending = fringeSolved;
+                minExtendingFringe = minFringeSolved;
+                seenComparing = seenScrambled;
+                fringeComparing = fringeScrambled;
+                minComparingFringe = minFringeScrambled;
+            } else {
+                seenExtending = seenScrambled;
+                fringeExtending = fringeScrambled;
+                minExtendingFringe = minFringeScrambled;
+                seenComparing = seenSolved;
+                fringeComparing = fringeSolved;
+                minComparingFringe = minFringeSolved;
+            }
+
+            PuzzleState node = fringeExtending.pop();
+            int distance = seenExtending.get(node);
+            if (seenComparing.containsKey(node)) {
+                // We found an intersection! Compute the total cost of the
+                // path going through this node.
+                int cost = seenComparing.get(node) + distance;
+                if (cost < bestIntersectionCost) {
+                    bestIntersection = node;
+                    bestIntersectionCost = cost;
+                }
+                continue;
+            }
+            // The best possible solution involving this node would
+            // be through a child of this node that gets us across to
+            // the other fringe's smallest distance node.
+            int bestPossibleSolution = distance + minComparingFringe;
+            if (bestPossibleSolution >= bestIntersectionCost) {
+                continue;
+            }
+            if (distance >= (n + 1) / 2) {
+                // The +1 is because if n is odd, we would have to search
+                // from one side with distance n/2 and from the other side
+                // distance n/2 + 1. Because we don't know which is which,
+                // let's take (n+1)/2 for both.
+                continue;
+            }
+
+            Map<? extends PuzzleState, String> movesByState = node.getCanonicalMovesByState();
+            for (PuzzleState next : movesByState.keySet()) {
+                int moveCost = node.getMoveCost(movesByState.get(next));
+                int nextDistance = distance + moveCost;
+                next = next.getNormalized();
+                if (seenExtending.containsKey(next)) {
+                    if (nextDistance >= seenExtending.get(next)) {
+                        // We already found a better path to next.
+                        continue;
+                    }
+                    // Go on to clobber seenExtending with our updated
+                    // distance. Unfortunately, we're going have 2 copies
+                    // of next in our fringe. This doesn't change correctness,
+                    // it just means a bit of wasted work when we get around
+                    // to popping off the second one.
+                }
+                fringeExtending.add(next, nextDistance);
+                seenExtending.put(next, nextDistance);
+            }
+        }
+
+        if (bestIntersection == null) {
+            return null;
+        }
+
+        // We have found a solution, but we still have to recover the move sequence.
+        // the `bestIntersection` is the bound between the solved and the scrambled states.
+        // We can travel from `bestIntersection` to either states, like that:
+        // solved <----- bestIntersection -----> scrambled
+        // However, to build a solution, we need to travel like that:
+        // solved <----- bestIntersection <----- scrambled
+        // So we have to travel backward for the scrambled side.
+
+        // Step 1: bestIntersection -----> scrambled
+
+        assert bestIntersection.isNormalized();
+        PuzzleState state = bestIntersection;
+        int distanceFromScrambled = seenScrambled.get(state);
+
+        // We have to keep track of all states we have visited
+        PuzzleState[] linkedStates = new PuzzleState[distanceFromScrambled + 1];
+        linkedStates[distanceFromScrambled] = state;
+
+        outer:
+        while (distanceFromScrambled > 0) {
+            for (PuzzleState next : state.getCanonicalMovesByState().keySet()) {
+                next = next.getNormalized();
+                if (seenScrambled.containsKey(next)) {
+                    int newDistanceFromScrambled = seenScrambled.get(next);
+                    if (newDistanceFromScrambled < distanceFromScrambled) {
+                        state = next;
+                        distanceFromScrambled = newDistanceFromScrambled;
+                        linkedStates[distanceFromScrambled] = state;
+                        continue outer;
+                    }
+                }
+            }
+            assert false;
+        }
+
+        // Step 2: bestIntersection <----- scrambled
+
+        AlgorithmBuilder solution = new AlgorithmBuilder(MergingMode.CANONICALIZE_MOVES, ps);
+        state = ps;
+
+        outer:
+        while (!state.equalsNormalized(bestIntersection)) {
+            for (Entry<? extends PuzzleState, String> next : state.getCanonicalMovesByState().entrySet()) {
+                PuzzleState nextState = next.getKey();
+                String moveName = next.getValue();
+                if (nextState.equalsNormalized(linkedStates[distanceFromScrambled + 1])) {
+                    state = nextState;
+                    try {
+                        solution.appendMove(moveName);
+                    } catch (InvalidMoveException e) {
+                        throw new RuntimeException(e);
+                    }
+                    distanceFromScrambled = seenScrambled.get(state.getNormalized());
+                    continue outer;
+                }
+            }
+            assert false;
+        }
+
+        // Step 3: solved <----- bestIntersection
+
+        int distanceFromSolved = seenSolved.get(state.getNormalized());
+        outer:
+        while (distanceFromSolved > 0) {
+            for (Entry<? extends PuzzleState, String> next : state.getCanonicalMovesByState().entrySet()) {
+                PuzzleState nextState = next.getKey();
+                PuzzleState nextStateNormalized = nextState.getNormalized();
+                String moveName = next.getValue();
+                if (seenSolved.containsKey(nextStateNormalized)) {
+                    int newDistanceFromSolved = seenSolved.get(nextStateNormalized);
+                    if (newDistanceFromSolved < distanceFromSolved) {
+                        state = nextState;
+                        distanceFromSolved = newDistanceFromSolved;
+                        try {
+                            solution.appendMove(moveName);
+                        } catch (InvalidMoveException e) {
+                            throw new RuntimeException(e);
+                        }
+                        continue outer;
+                    }
+                }
+            }
+            assert false;
+        }
+
+        return solution.toString();
+    }
+
+    /**
+     * @return A PuzzleState representing the solved state of our puzzle
+     * from where we will begin scrambling.
+     */
+    public abstract PuzzleState getSolvedState();
+
+    /**
+     * @return The number of random moves we must apply to call a puzzle
+     * sufficiently scrambled.
+     */
+    protected abstract int getRandomMoveCount();
+
+    /**
+     * This function will generate getRandomTurnCount() number of non cancelling,
+     * random turns. If a puzzle wants to provide custom scrambles
+     * (for example: Pochmann style megaminx or MRSS), it should override this method.
+     * <p>
+     * NOTE: It is assumed that this method is thread safe! That means that if you're
+     * overriding this method and you don't know what you're doing,
+     * use the synchronized keyword when implementing this method:<br>
+     * <code>protected synchronized String generateScramble(Random r);</code>
+     * @param r An instance of Random
+     * @return A PuzzleStateAndGenerator that contains a scramble string, and the
+     *         state achieved by applying that scramble.
+     */
+    @NoExport
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+        AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.NO_MERGING);
+        while (ab.getTotalCost() < getRandomMoveCount()) {
+            Map<String, ? extends PuzzleState> successors = ab.getState().getScrambleSuccessors();
+            String move;
+            try {
+                do {
+                    move = choose(r, successors.keySet());
+                    // If this move happens to be redundant, there is no
+                    // reason to select this move again in vain.
+                    successors.remove(move);
+                } while (ab.isRedundant(move));
+                ab.appendMove(move);
+            } catch (InvalidMoveException e) {
+                l.log(Level.SEVERE, "", e);
+                throw new RuntimeException(e);
+            }
+        }
+        return ab.getStateAndGenerator();
     }
 
     public static class Bucket<H> implements Comparable<Bucket<H>> {
         private final LinkedList<H> contents;
         private final int value;
+
         public Bucket(int value) {
             this.value = value;
             this.contents = new LinkedList<>();
@@ -331,6 +636,7 @@ public abstract class Puzzle implements Exportable {
 
     public static class SortedBuckets<H> {
         private final TreeSet<Bucket<H>> buckets;
+
         public SortedBuckets() {
             buckets = new TreeSet<>();
         }
@@ -338,7 +644,7 @@ public abstract class Puzzle implements Exportable {
         public void add(H element, int value) {
             Bucket<H> bucket;
             Bucket<H> searchBucket = new Bucket<>(value);
-            if(!buckets.contains(searchBucket)) {
+            if (!buckets.contains(searchBucket)) {
                 // There is no bucket yet for value, so we create one.
                 bucket = searchBucket;
                 buckets.add(bucket);
@@ -353,13 +659,13 @@ public abstract class Puzzle implements Exportable {
         }
 
         public boolean isEmpty() {
-            return buckets.size() == 0;
+            return buckets.isEmpty();
         }
 
         public H pop() {
             Bucket<H> bucket = buckets.first();
             H h = bucket.pop();
-            if(bucket.isEmpty()) {
+            if (bucket.isEmpty()) {
                 // We just removed the last element from this bucket,
                 // so we can trash the bucket now.
                 buckets.remove(bucket);
@@ -380,220 +686,6 @@ public abstract class Puzzle implements Exportable {
         }
     }
 
-    protected String solveIn(PuzzleState ps, int n) {
-        if(ps.isSolved()) {
-            return "";
-        }
-
-        Map<PuzzleState, Integer> seenSolved = new HashMap<>();
-        SortedBuckets<PuzzleState> fringeSolved = new SortedBuckets<>();
-        Map<PuzzleState, Integer> seenScrambled = new HashMap<>();
-        SortedBuckets<PuzzleState> fringeScrambled = new SortedBuckets<>();
-
-        // We're only interested in solutions of cost <= n
-        int bestIntersectionCost = n + 1;
-        PuzzleState bestIntersection = null;
-
-        PuzzleState solvedNormalized = getSolvedState().getNormalized();
-        fringeSolved.add(solvedNormalized, 0);
-        seenSolved.put(solvedNormalized, 0);
-        fringeScrambled.add(ps.getNormalized(), 0);
-        seenScrambled.put(ps.getNormalized(), 0);
-
-        int fringeTies = 0;
-
-        // The task here is to do a breadth-first search starting from both the solved state and the scrambled state.
-        // When we got an intersection from the two hash maps, we are done!
-        int minFringeScrambled = -1, minFringeSolved = -1;
-        while(!fringeSolved.isEmpty() || !fringeScrambled.isEmpty()) {
-            // We have to choose on which side we are extending our search.
-            // I'm choosing the non empty fringe with the node nearest
-            // its origin. In the event of a tie, we make sure to alternate.
-            if(!fringeScrambled.isEmpty()) {
-                minFringeScrambled = fringeScrambled.smallestValue();
-            }
-            if(!fringeSolved.isEmpty()) {
-                minFringeSolved = fringeSolved.smallestValue();
-            }
-            boolean extendSolved;
-            if(fringeSolved.isEmpty() || fringeScrambled.isEmpty()) {
-                // If the solved fringe is not empty, we'll expand it.
-                // Otherwise, we're expanding the scrambled fringe.
-                extendSolved = !fringeSolved.isEmpty();
-            } else {
-                if(minFringeSolved < minFringeScrambled) {
-                    extendSolved = true;
-                } else if(minFringeSolved > minFringeScrambled) {
-                    extendSolved = false;
-                } else {
-                    extendSolved = (fringeTies++) % 2 == 0;
-                }
-            }
-
-            // We are using references for a more concise code.
-            Map<PuzzleState, Integer> seenExtending;
-            SortedBuckets<PuzzleState> fringeExtending;
-            Map<PuzzleState, Integer> seenComparing;
-            SortedBuckets<PuzzleState> fringeComparing;
-            int minExtendingFringe, minComparingFringe;
-            if(extendSolved) {
-                seenExtending = seenSolved;
-                fringeExtending = fringeSolved;
-                minExtendingFringe = minFringeSolved;
-                seenComparing = seenScrambled;
-                fringeComparing = fringeScrambled;
-                minComparingFringe = minFringeScrambled;
-            } else {
-                seenExtending = seenScrambled;
-                fringeExtending = fringeScrambled;
-                minExtendingFringe = minFringeScrambled;
-                seenComparing = seenSolved;
-                fringeComparing = fringeSolved;
-                minComparingFringe = minFringeSolved;
-            }
-
-            PuzzleState node = fringeExtending.pop();
-            int distance = seenExtending.get(node);
-            if(seenComparing.containsKey(node)) {
-                // We found an intersection! Compute the total cost of the
-                // path going through this node.
-                int cost = seenComparing.get(node) + distance;
-                if(cost < bestIntersectionCost) {
-                    bestIntersection = node;
-                    bestIntersectionCost = cost;
-                }
-                continue;
-            }
-            // The best possible solution involving this node would
-            // be through a child of this node that gets us across to
-            // the other fringe's smallest distance node.
-            int bestPossibleSolution = distance + minComparingFringe;
-            if(bestPossibleSolution >= bestIntersectionCost) {
-                continue;
-            }
-            if(distance >= (n+1)/2) {
-                // The +1 is because if n is odd, we would have to search
-                // from one side with distance n/2 and from the other side
-                // distance n/2 + 1. Because we don't know which is which,
-                // let's take (n+1)/2 for both.
-                continue;
-            }
-
-
-            Map<? extends PuzzleState, String> movesByState = node.getCanonicalMovesByState();
-            for(PuzzleState next : movesByState.keySet()) {
-                int moveCost = node.getMoveCost(movesByState.get(next));
-                int nextDistance = distance + moveCost;
-                next = next.getNormalized();
-                if(seenExtending.containsKey(next)) {
-                    if(nextDistance >= seenExtending.get(next)) {
-                        // We already found a better path to next.
-                        continue;
-                    }
-                    // Go on to clobber seenExtending with our updated
-                    // distance. Unfortunately, we're going have 2 copies
-                    // of next in our fringe. This doesn't change correctness,
-                    // it just means a bit of wasted work when we get around
-                    // to popping off the second one.
-                }
-                fringeExtending.add(next, nextDistance);
-                seenExtending.put(next, nextDistance);
-            }
-        }
-
-        if(bestIntersection == null) {
-            return null;
-        }
-
-        // We have found a solution, but we still have to recover the move sequence.
-        // the `bestIntersection` is the bound between the solved and the scrambled states.
-        // We can travel from `bestIntersection` to either states, like that:
-        // solved <----- bestIntersection -----> scrambled
-        // However, to build a solution, we need to travel like that:
-        // solved <----- bestIntersection <----- scrambled
-        // So we have to travel backward for the scrambled side.
-
-        // Step 1: bestIntersection -----> scrambled
-
-        assert bestIntersection.isNormalized();
-        PuzzleState state = bestIntersection;
-        int distanceFromScrambled = seenScrambled.get(state);
-
-        // We have to keep track of all states we have visited
-        PuzzleState[] linkedStates = new PuzzleState[distanceFromScrambled + 1];
-        linkedStates[distanceFromScrambled] = state;
-
-    outer:
-        while(distanceFromScrambled > 0) {
-            for(PuzzleState next : state.getCanonicalMovesByState().keySet()) {
-                next = next.getNormalized();
-                if(seenScrambled.containsKey(next)) {
-                    int newDistanceFromScrambled = seenScrambled.get(next);
-                    if(newDistanceFromScrambled < distanceFromScrambled) {
-                        state = next;
-                        distanceFromScrambled = newDistanceFromScrambled;
-                        linkedStates[distanceFromScrambled] = state;
-                        continue outer;
-                    }
-                }
-            }
-            assert false;
-        }
-
-        // Step 2: bestIntersection <----- scrambled
-
-        AlgorithmBuilder solution = new AlgorithmBuilder(MergingMode.CANONICALIZE_MOVES, ps);
-        state = ps;
-        distanceFromScrambled = 0;
-
-    outer:
-        while(!state.equalsNormalized(bestIntersection)) {
-            for(Entry<? extends PuzzleState, String> next : state.getCanonicalMovesByState().entrySet()) {
-                PuzzleState nextState = next.getKey();
-                String moveName = next.getValue();
-                if(nextState.equalsNormalized(linkedStates[distanceFromScrambled+1])) {
-                    state = nextState;
-                    try {
-                        solution.appendMove(moveName);
-                    } catch(InvalidMoveException e) {
-                        throw new RuntimeException(e);
-                    }
-                    distanceFromScrambled = seenScrambled.get(state.getNormalized());
-                    continue outer;
-                }
-            }
-            assert false;
-        }
-
-        // Step 3: solved <----- bestIntersection
-
-        int distanceFromSolved = seenSolved.get(state.getNormalized());
-    outer:
-        while(distanceFromSolved > 0) {
-            for(Entry<? extends PuzzleState, String> next : state.getCanonicalMovesByState().entrySet()) {
-                PuzzleState nextState = next.getKey();
-                PuzzleState nextStateNormalized = nextState.getNormalized();
-                String moveName = next.getValue();
-                if(seenSolved.containsKey(nextStateNormalized)) {
-                    int newDistanceFromSolved = seenSolved.get(nextStateNormalized);
-                    if(newDistanceFromSolved < distanceFromSolved) {
-                        state = nextState;
-                        distanceFromSolved = newDistanceFromSolved;
-                        try {
-                            solution.appendMove(moveName);
-                        } catch(InvalidMoveException e) {
-                            throw new RuntimeException(e);
-                        }
-                        continue outer;
-                    }
-                }
-            }
-            assert false;
-        }
-
-        return solution.toString();
-    }
-
     public abstract class PuzzleState {
         public PuzzleState() {}
 
@@ -605,10 +697,10 @@ public abstract class Puzzle implements Exportable {
          */
         public PuzzleState applyAlgorithm(String algorithm) throws InvalidScrambleException {
             PuzzleState state = this;
-            for(String move : AlgorithmBuilder.splitAlgorithm(algorithm)) {
+            for (String move : AlgorithmBuilder.splitAlgorithm(algorithm)) {
                 try {
                     state = state.apply(move);
-                } catch(InvalidMoveException e) {
+                } catch (InvalidMoveException e) {
                     throw new InvalidScrambleException(algorithm, e);
                 }
             }
@@ -630,12 +722,12 @@ public abstract class Puzzle implements Exportable {
             // We're not interested in any successor states are just a
             // rotation away.
             statesSeenNormalized.add(this.getNormalized());
-            for(Entry<String, ? extends PuzzleState> next : successorsByName.entrySet()) {
+            for (Entry<String, ? extends PuzzleState> next : successorsByName.entrySet()) {
                 PuzzleState nextState = next.getValue();
                 PuzzleState nextStateNormalized = nextState.getNormalized();
                 String moveName = next.getKey();
                 // Only add nextState if it's "unique"
-                if(!statesSeenNormalized.contains(nextStateNormalized)) {
+                if (!statesSeenNormalized.contains(nextStateNormalized)) {
                     uniqueSuccessors.put(nextState, moveName);
                     statesSeenNormalized.add(nextStateNormalized);
                 }
@@ -724,7 +816,6 @@ public abstract class Puzzle implements Exportable {
          * true if (2,0) can be applied to a solved square one, even though
          * it results in a state that cannot
          * be slashed.
-
          * @return A HashMap mapping move Strings to resulting PuzzleStates.
          *         The move Strings may not contain spaces.
          */
@@ -746,6 +837,7 @@ public abstract class Puzzle implements Exportable {
          * @return true if this is equal to other
          */
         public abstract boolean equals(Object other);
+
         public abstract int hashCode();
 
         public boolean equalsNormalized(PuzzleState other) {
@@ -779,7 +871,7 @@ public abstract class Puzzle implements Exportable {
          */
         public PuzzleState apply(String move) throws InvalidMoveException {
             Map<String, ? extends PuzzleState> successors = getSuccessorsByName();
-            if(!successors.containsKey(move)) {
+            if (!successors.containsKey(move)) {
                 throw new InvalidMoveException("Unrecognized turn " + move);
             }
             return successors.get(move);
@@ -808,90 +900,5 @@ public abstract class Puzzle implements Exportable {
                 return false;
             }
         }
-    }
-
-    /**
-     * @return A PuzzleState representing the solved state of our puzzle
-     * from where we will begin scrambling.
-     */
-    public abstract PuzzleState getSolvedState();
-
-    /**
-     * @return The number of random moves we must apply to call a puzzle
-     * sufficiently scrambled.
-     */
-    protected abstract int getRandomMoveCount();
-
-    /**
-     * This function will generate getRandomTurnCount() number of non cancelling,
-     * random turns. If a puzzle wants to provide custom scrambles
-     * (for example: Pochmann style megaminx or MRSS), it should override this method.
-     *
-     * NOTE: It is assumed that this method is thread safe! That means that if you're
-     * overriding this method and you don't know what you're doing,
-     * use the synchronized keyword when implementing this method:<br>
-     * <code>protected synchronized String generateScramble(Random r);</code>
-     * @param r An instance of Random
-     * @return A PuzzleStateAndGenerator that contains a scramble string, and the
-     *         state achieved by applying that scramble.
-     */
-    @NoExport
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
-        AlgorithmBuilder ab = new AlgorithmBuilder(
-                this, MergingMode.NO_MERGING);
-        while(ab.getTotalCost() < getRandomMoveCount()) {
-            Map<String, ? extends PuzzleState> successors =
-                ab.getState().getScrambleSuccessors();
-            String move;
-            try {
-                do {
-                    move = choose(r, successors.keySet());
-                    // If this move happens to be redundant, there is no
-                    // reason to select this move again in vain.
-                    successors.remove(move);
-                } while(ab.isRedundant(move));
-                ab.appendMove(move);
-            } catch(InvalidMoveException e) {
-                l.log(Level.SEVERE, "", e);
-                throw new RuntimeException(e);
-            }
-        }
-        return ab.getStateAndGenerator();
-    }
-
-    public static int[] cloneArr(int[] src) {
-        int[] dest = new int[src.length];
-        System.arraycopy(src, 0, dest, 0, src.length);
-        return dest;
-    }
-
-    public static void deepCopy(int[][] src, int[][] dest) {
-        for(int i = 0; i < src.length; i++) {
-            System.arraycopy(src[i], 0, dest[i], 0, src[i].length);
-        }
-    }
-
-    public static void deepCopy(int[][][] src, int[][][] dest) {
-        for(int i = 0; i < src.length; i++) {
-            deepCopy(src[i], dest[i]);
-        }
-    }
-
-    public static <H> H choose(Random r, Iterable<H> keySet) {
-        H chosen = null;
-        int count = 0;
-        for(H element : keySet) {
-            if(r.nextInt(++count) == 0) {
-                chosen = element;
-            }
-        }
-        assert count > 0;
-        return chosen;
-    }
-
-    public static int[] copyOfRange(int[] src, int from, int to) {
-        int[] dest = new int[to - from];
-        System.arraycopy(src, from, dest, 0, dest.length);
-        return dest;
     }
 }

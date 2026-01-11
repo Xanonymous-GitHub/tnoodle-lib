@@ -20,4 +20,9 @@ attachRemoteRepositories()
 dependencies {
     implementation(project(":min2phase"))
     implementation(libs.slf4j.api)
+
+    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.junit.jupiter.engine)
+
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

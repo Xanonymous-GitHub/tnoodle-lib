@@ -30,6 +30,23 @@ dependencies {
     implementation(project(":sq12phase"))
 
     api(libs.gwt.exporter)
+
+    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.junit.jupiter.engine)
+
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 configureJUnit5()
+
+tasks.shadowJar {
+    mergeServiceFiles()
+
+    // Handle duplicate META-INF files (signature files can cause conflicts)
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+
+    // Workaround for Shadow plugin bug with empty META-INF directories
+    // https://github.com/GradleUp/shadow/issues/111
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+}

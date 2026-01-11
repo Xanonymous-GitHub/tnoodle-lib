@@ -1,11 +1,11 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.Test;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class NoInspectionFiveByFiveTest {
     @Test
@@ -13,9 +13,9 @@ public class NoInspectionFiveByFiveTest {
         CubePuzzle fives = new NoInspectionFiveByFiveCubePuzzle();
 
         CubePuzzle.CubeMove dummyMove = fives.new CubeMove(CubePuzzle.Face.U, 1, 3);
-        CubePuzzle.CubeMove[] reorient = new CubePuzzle.CubeMove[]{ dummyMove };
+        CubePuzzle.CubeMove[] reorient = new CubePuzzle.CubeMove[] { dummyMove };
 
-        assertEquals(reorient[0].toString(), "4Uw");
+        assertEquals("4Uw", reorient[0].toString());
 
         AlgorithmBuilder ab = new AlgorithmBuilder(fives, AlgorithmBuilder.MergingMode.NO_MERGING);
         ab.appendAlgorithm("F R");
@@ -24,7 +24,7 @@ public class NoInspectionFiveByFiveTest {
         PuzzleStateAndGenerator psag2 = NoInspectionFiveByFiveCubePuzzle.applyOrientation(fives, reorient, psag1, true);
         //The scramble (F R) and the reorient (4Uw) don't conflict,
         //so the resulting scramble should be "F R 4Uw"
-        assertEquals(psag2.generator, "F R 4Uw");
+        assertEquals("F R 4Uw", psag2.generator);
 
         ab = new AlgorithmBuilder(fives, AlgorithmBuilder.MergingMode.NO_MERGING);
         ab.appendAlgorithm("F D");
@@ -34,7 +34,7 @@ public class NoInspectionFiveByFiveTest {
         //The scramble (F D) and the reorient (4Uw) are redundant.
         //The problematic D turn should be removed, and the resulting
         //scramble should be "F 4Uw"
-        assertEquals(psag2.generator, "F 4Uw");
+        assertEquals("F 4Uw", psag2.generator);
 
         ab = new AlgorithmBuilder(fives, AlgorithmBuilder.MergingMode.NO_MERGING);
         ab.appendAlgorithm("D U D U");
@@ -44,6 +44,6 @@ public class NoInspectionFiveByFiveTest {
         //The scramble (D U D U) and the reorient (4Uw) are redundant.
         //The problematic D turns should be removed, and the resulting
         //scramble should be "U U 4Uw"
-        assertEquals(psag2.generator, "U U 4Uw");
+        assertEquals("U U 4Uw", psag2.generator);
     }
 }

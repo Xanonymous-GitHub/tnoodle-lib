@@ -1,8 +1,8 @@
 package org.worldcubeassociation.tnoodle.scrambleanalysis.statistics;
 
-import java.util.Arrays;
-
 import static org.worldcubeassociation.tnoodle.scrambleanalysis.utils.MathUtils.nCp;
+
+import java.util.Arrays;
 
 public class Distribution {
 
@@ -70,7 +70,7 @@ public class Distribution {
             for (int j = 0; j < corners; j++) {
                 for (int k = 0; k < corners; k++) {
                     // if j + k > 8, then the second nCp will always be 0. Adds nothing to the sum.
-                    if (j + k <= 8 && j * 2 + k * 1 == sum) {
+                    if (j + k <= 8 && j * 2 + k == sum) {
                         partial += nCp(8, j) * nCp(8 - j, k);
                     }
                 }

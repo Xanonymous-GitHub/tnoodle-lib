@@ -4,20 +4,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class Square {
-    private static Logger logger = LoggerFactory.getLogger(Square.class);
-
+    static byte[] SquarePrun = new byte[40320 * 2];         //pruning table; #twists to solve corner|edge permutation
+    static char[] TwistMove = new char[40320];          //transition table for twists
+    static char[] TopMove = new char[40320];            //transition table for top layer turns
+    static char[] BottomMove = new char[40320];         //transition table for bottom layer turns
+    static int[][] Cnk = new int[12][12];
+    static boolean inited = false;
+    private static final Logger logger = LoggerFactory.getLogger(Square.class);
+    private static final int[] fact = { 1, 1, 2, 6, 24, 120, 720, 5040 };
     int edgeperm;       //number encoding the edge permutation 0-40319
     int cornperm;       //number encoding the corner permutation 0-40319
     boolean topEdgeFirst;   //true if top layer starts with edge left of seam
     boolean botEdgeFirst;   //true if bottom layer starts with edge right of seam
     int ml;         //shape of middle layer (+/-1, or 0 if ignored)
-
-    static byte[] SquarePrun = new byte[40320 * 2];         //pruning table; #twists to solve corner|edge permutation
-    static char[] TwistMove = new char[40320];          //transition table for twists
-    static char[] TopMove = new char[40320];            //transition table for top layer turns
-    static char[] BottomMove = new char[40320];         //transition table for bottom layer turns
-
-    private static int[] fact = {1, 1, 2, 6, 24, 120, 720, 5040};
 
     static void set8Perm(byte[] arr, int idx) {
         int val = 0x76543210;
@@ -26,11 +25,11 @@ class Square {
             int v = idx / p;
             idx -= v * p;
             v <<= 2;
-            arr[i] = (byte) ((val >> v) & 07);
+            arr[i] = (byte) ((val >> v) & 7);
             int m = (1 << v) - 1;
             val = (val & m) + ((val >> 4) & ~m);
         }
-        arr[7] = (byte)val;
+        arr[7] = (byte) val;
     }
 
     static char get8Perm(byte[] arr) {
@@ -38,13 +37,11 @@ class Square {
         int val = 0x76543210;
         for (int i = 0; i < 7; i++) {
             int v = arr[i] << 2;
-            idx = (8 - i) * idx + ((val >> v) & 07);
+            idx = (8 - i) * idx + ((val >> v) & 7);
             val -= 0x11111110 << v;
         }
-        return (char)idx;
+        return (char) idx;
     }
-
-    static int[][] Cnk = new int[12][12];
 
     static int get8Comb(byte[] arr) {
         int idx = 0, r = 4;
@@ -55,8 +52,6 @@ class Square {
         }
         return idx;
     }
-
-    static boolean inited = false;
 
     static void init() {
         if (inited) {
@@ -76,18 +71,30 @@ class Square {
             //twist
             set8Perm(pos, i);
 
-            temp = pos[2]; pos[2] = pos[4]; pos[4] = temp;
-            temp = pos[3]; pos[3] = pos[5]; pos[5] = temp;
+            temp = pos[2];
+            pos[2] = pos[4];
+            pos[4] = temp;
+            temp = pos[3];
+            pos[3] = pos[5];
+            pos[5] = temp;
             TwistMove[i] = get8Perm(pos);
 
             //top layer turn
             set8Perm(pos, i);
-            temp = pos[0]; pos[0] = pos[1]; pos[1] = pos[2]; pos[2] = pos[3]; pos[3] = temp;
+            temp = pos[0];
+            pos[0] = pos[1];
+            pos[1] = pos[2];
+            pos[2] = pos[3];
+            pos[3] = temp;
             TopMove[i] = get8Perm(pos);
 
             //bottom layer turn
             set8Perm(pos, i);
-            temp = pos[4]; pos[4] = pos[5]; pos[5] = pos[6]; pos[6] = pos[7]; pos[7] = temp;
+            temp = pos[4];
+            pos[4] = pos[5];
+            pos[5] = pos[6];
+            pos[6] = pos[7];
+            pos[7] = temp;
             BottomMove[i] = get8Perm(pos);
         }
 

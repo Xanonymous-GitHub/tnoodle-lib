@@ -10,11 +10,18 @@ import org.worldcubeassociation.tnoodle.scrambles.Puzzle.PuzzleState;
 public class AlgorithmBuilder {
     private static final Logger l = Logger.getLogger(AlgorithmBuilder.class.getName());
 
+    public static String[] splitAlgorithm(String algorithm) {
+        if (algorithm.trim().isEmpty()) {
+            return new String[0];
+        }
+        return algorithm.split("\\s+");
+    }
     private final List<String> moves = new ArrayList<>();
     /**
      * states.get(i) = state achieved by applying moves[0]...moves[i-1]
      */
     private final List<PuzzleState> states = new ArrayList<>();
+    private final MergingMode mergingMode;
     /**
      * If we are in CANONICALIZE_MOVES MergingMode, then something like
      * Uw Dw on a 4x4x4 will become Uw2. This means the state we end
@@ -25,7 +32,6 @@ public class AlgorithmBuilder {
      */
     private PuzzleState originalState, unNormalizedState;
     private int totalCost;
-    private final MergingMode mergingMode;
 
     public AlgorithmBuilder(Puzzle puzzle, MergingMode mergingMode) {
         this(mergingMode, puzzle.getSolvedState());
@@ -43,6 +49,156 @@ public class AlgorithmBuilder {
         this.moves.clear();
         this.states.clear();
         states.add(unNormalizedState);
+    }
+
+    public boolean isRedundant(String move) throws InvalidMoveException {
+        // TODO - add support for MERGE_REDUNDANT_MOVES_PRESERVE_STATE
+        //MergingMode mergingMode = preserveState ? MergingMode.MERGE_REDUNDANT_MOVES_PRESERVE_STATE : MergingMode.CANONICALIZE_MOVES;
+        MergingMode mergingMode = MergingMode.CANONICALIZE_MOVES;
+        IndexAndMove indexAndMove = findBestIndexForMove(move, mergingMode);
+        return indexAndMove.index < moves.size() || indexAndMove.move == null;
+    }
+
+    public IndexAndMove findBestIndexForMove(String move, MergingMode mergingMode) throws InvalidMoveException {
+        if (mergingMode == MergingMode.NO_MERGING) {
+            return new IndexAndMove(moves.size(), move);
+        }
+
+        PuzzleState newUnNormalizedState = unNormalizedState.apply(move);
+        if (newUnNormalizedState.equalsNormalized(unNormalizedState)) {
+            // move must just be a rotation.
+            if (mergingMode == MergingMode.CANONICALIZE_MOVES) {
+                return new IndexAndMove(0, null);
+            }
+        }
+        PuzzleState newNormalizedState = newUnNormalizedState.getNormalized();
+
+        Map<? extends PuzzleState, String> successors = getState().getCanonicalMovesByState();
+        move = null;
+        // Search for the right move to do to our current state in
+        // order to match up with newNormalizedState.
+        for (PuzzleState ps : successors.keySet()) {
+            if (ps.equalsNormalized(newNormalizedState)) {
+                move = successors.get(ps);
+                break;
+            }
+        }
+        // One of getStates()'s successors must be newNormalizedState.
+        // If not, something has gone very wrong.
+        assert move != null;
+
+        if (mergingMode == MergingMode.CANONICALIZE_MOVES) {
+            for (int lastMoveIndex = moves.size() - 1; lastMoveIndex >= 0; lastMoveIndex--) {
+                String lastMove = moves.get(lastMoveIndex);
+                PuzzleState stateBeforeLastMove = states.get(lastMoveIndex);
+                if (!stateBeforeLastMove.movesCommute(lastMove, move)) {
+                    break;
+                }
+                PuzzleState stateAfterLastMove = states.get(lastMoveIndex + 1);
+                PuzzleState stateAfterLastMoveAndNewMove = stateAfterLastMove.apply(move);
+
+                if (stateBeforeLastMove.equalsNormalized(stateAfterLastMoveAndNewMove)) {
+                    // move cancels with lastMove
+                    return new IndexAndMove(lastMoveIndex, null);
+                } else {
+                    successors = stateBeforeLastMove.getCanonicalMovesByState();
+                    for (PuzzleState ps : successors.keySet()) {
+                        if (ps.equalsNormalized(stateAfterLastMoveAndNewMove)) {
+                            String alternateLastMove = successors.get(ps);
+                            // move merges with lastMove
+                            return new IndexAndMove(lastMoveIndex, alternateLastMove);
+                        }
+                    }
+                }
+            }
+        }
+        return new IndexAndMove(moves.size(), move);
+    }
+
+    public void appendMove(String newMove) throws InvalidMoveException {
+        l.fine("appendMove(" + newMove + ")");
+        IndexAndMove indexAndMove = findBestIndexForMove(newMove, mergingMode);
+        int oldCostMove, newCostMove;
+        if (indexAndMove.index < moves.size()) {
+            // This move is redundant.
+            assert mergingMode != MergingMode.NO_MERGING;
+            oldCostMove = states.get(indexAndMove.index).getMoveCost(moves.get(indexAndMove.index));
+            if (indexAndMove.move == null) {
+                // newMove cancelled perfectly with the move at
+                // indexAndMove.index.
+                moves.remove(indexAndMove.index);
+                states.remove(indexAndMove.index + 1);
+                newCostMove = 0;
+            } else {
+                // newMove merged with the move at indexAndMove.index.
+                moves.set(indexAndMove.index, indexAndMove.move);
+                newCostMove = states.get(indexAndMove.index).getMoveCost(indexAndMove.move);
+            }
+        } else {
+            oldCostMove = 0;
+            newCostMove = states.getLast().getMoveCost(indexAndMove.move);
+            // This move is not redundant.
+            moves.add(indexAndMove.move);
+            // The code to update the states array is right below us,
+            // but it requires that the states array be of the correct
+            // size.
+            states.add(null);
+        }
+
+        totalCost += newCostMove - oldCostMove;
+
+        // We modified moves[ indexAndMove.index ], so everything in
+        // states[ indexAndMove.index+1, ... ] is now invalid
+        for (int i = indexAndMove.index + 1; i < states.size(); i++) {
+            states.set(i, states.get(i - 1).apply(moves.get(i - 1)));
+        }
+
+        unNormalizedState = unNormalizedState.apply(newMove);
+        assert states.size() == moves.size() + 1;
+        assert unNormalizedState.equalsNormalized(getState());
+    }
+
+    public void popMove(int index) {
+        List<String> movesCopy = new ArrayList<>(moves);
+        String poppedMove = movesCopy.remove(index);
+
+        resetToState(originalState);
+        for (String move : movesCopy) {
+            try {
+                appendMove(move);
+            } catch (InvalidMoveException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void appendAlgorithm(String algorithm) throws InvalidMoveException {
+        for (String move : splitAlgorithm(algorithm)) {
+            appendMove(move);
+        }
+    }
+
+    public void appendAlgorithms(String[] algorithms) throws InvalidMoveException {
+        for (String algorithm : algorithms) {
+            appendAlgorithm(algorithm);
+        }
+    }
+
+    public PuzzleState getState() {
+        assert states.size() == moves.size() + 1;
+        return states.getLast();
+    }
+
+    public int getTotalCost() {
+        return totalCost;
+    }
+
+    public String toString() {
+        return String.join(" ", moves);
+    }
+
+    public PuzzleStateAndGenerator getStateAndGenerator() {
+        return new PuzzleStateAndGenerator(getState(), toString());
     }
 
     public enum MergingMode {
@@ -79,177 +235,21 @@ public class AlgorithmBuilder {
         //  - "R R" becomes "R2"
         //  - "L Rw" becomes "L2"
         //  - "F x U" becomes "F2"
-        CANONICALIZE_MOVES;
-    }
-
-    public boolean isRedundant(String move) throws InvalidMoveException {
-        // TODO - add support for MERGE_REDUNDANT_MOVES_PRESERVE_STATE
-        //MergingMode mergingMode = preserveState ? MergingMode.MERGE_REDUNDANT_MOVES_PRESERVE_STATE : MergingMode.CANONICALIZE_MOVES;
-        MergingMode mergingMode = MergingMode.CANONICALIZE_MOVES;
-        IndexAndMove indexAndMove = findBestIndexForMove(move, mergingMode);
-        return indexAndMove.index < moves.size() || indexAndMove.move == null;
+        CANONICALIZE_MOVES
     }
 
     public static class IndexAndMove {
         public int index;
         public String move;
+
         public IndexAndMove(int index, String move) {
             this.index = index;
             this.move = move;
         }
+
         public String toString() {
             return "{ index: " + index + " move: " + move + " }";
         }
-    }
-
-    public IndexAndMove findBestIndexForMove(String move, MergingMode mergingMode) throws InvalidMoveException {
-        if(mergingMode == MergingMode.NO_MERGING) {
-            return new IndexAndMove(moves.size(), move);
-        }
-
-        PuzzleState newUnNormalizedState = unNormalizedState.apply(move);
-        if(newUnNormalizedState.equalsNormalized(unNormalizedState)) {
-            // move must just be a rotation.
-            if(mergingMode == MergingMode.CANONICALIZE_MOVES) {
-                return new IndexAndMove(0, null);
-            }
-        }
-        PuzzleState newNormalizedState = newUnNormalizedState.getNormalized();
-
-        Map<? extends PuzzleState, String> successors = getState().getCanonicalMovesByState();
-        move = null;
-        // Search for the right move to do to our current state in
-        // order to match up with newNormalizedState.
-        for(PuzzleState ps : successors.keySet()) {
-            if(ps.equalsNormalized(newNormalizedState)) {
-                move = successors.get(ps);
-                break;
-            }
-        }
-        // One of getStates()'s successors must be newNormalizedState.
-        // If not, something has gone very wrong.
-        assert move != null;
-
-        if(mergingMode == MergingMode.CANONICALIZE_MOVES) {
-            for(int lastMoveIndex = moves.size() - 1; lastMoveIndex >= 0; lastMoveIndex--) {
-                String lastMove = moves.get(lastMoveIndex);
-                PuzzleState stateBeforeLastMove = states.get(lastMoveIndex);
-                if(!stateBeforeLastMove.movesCommute(lastMove, move)) {
-                    break;
-                }
-                PuzzleState stateAfterLastMove = states.get(lastMoveIndex+1);
-                PuzzleState stateAfterLastMoveAndNewMove = stateAfterLastMove.apply(move);
-
-                if(stateBeforeLastMove.equalsNormalized(stateAfterLastMoveAndNewMove)) {
-                    // move cancels with lastMove
-                    return new IndexAndMove(lastMoveIndex, null);
-                } else {
-                    successors = stateBeforeLastMove.getCanonicalMovesByState();
-                    for(PuzzleState ps : successors.keySet()) {
-                        if(ps.equalsNormalized(stateAfterLastMoveAndNewMove)) {
-                            String alternateLastMove = successors.get(ps);
-                            // move merges with lastMove
-                            return new IndexAndMove(lastMoveIndex, alternateLastMove);
-                        }
-                    }
-                }
-            }
-        }
-        return new IndexAndMove(moves.size(), move);
-    }
-
-    public void appendMove(String newMove) throws InvalidMoveException {
-        l.fine("appendMove(" + newMove + ")");
-        IndexAndMove indexAndMove = findBestIndexForMove(newMove, mergingMode);
-        int oldCostMove, newCostMove;
-        if(indexAndMove.index < moves.size()) {
-            // This move is redundant.
-            assert mergingMode != MergingMode.NO_MERGING;
-            oldCostMove = states.get(indexAndMove.index).getMoveCost(moves.get(indexAndMove.index));
-            if(indexAndMove.move == null) {
-                // newMove cancelled perfectly with the move at
-                // indexAndMove.index.
-                moves.remove(indexAndMove.index);
-                states.remove(indexAndMove.index + 1);
-                newCostMove = 0;
-            } else {
-                // newMove merged with the move at indexAndMove.index.
-                moves.set(indexAndMove.index, indexAndMove.move);
-                newCostMove = states.get(indexAndMove.index).getMoveCost(indexAndMove.move);
-            }
-        } else {
-            oldCostMove = 0;
-            newCostMove = states.get(states.size() - 1).getMoveCost(indexAndMove.move);
-            // This move is not redundant.
-            moves.add(indexAndMove.move);
-            // The code to update the states array is right below us,
-            // but it requires that the states array be of the correct
-            // size.
-            states.add(null);
-        }
-
-        totalCost += newCostMove - oldCostMove;
-
-        // We modified moves[ indexAndMove.index ], so everything in
-        // states[ indexAndMove.index+1, ... ] is now invalid
-        for(int i = indexAndMove.index + 1; i < states.size(); i++) {
-            states.set(i, states.get(i - 1).apply(moves.get(i - 1)));
-        }
-
-        unNormalizedState = unNormalizedState.apply(newMove);
-        assert states.size() == moves.size() + 1;
-        assert unNormalizedState.equalsNormalized(getState());
-    }
-
-    public String popMove(int index) {
-        List<String> movesCopy = new ArrayList<>(moves);
-        String poppedMove = movesCopy.remove(index);
-
-        resetToState(originalState);
-        for(String move : movesCopy) {
-            try {
-                appendMove(move);
-            } catch(InvalidMoveException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return poppedMove;
-    }
-
-    public void appendAlgorithm(String algorithm) throws InvalidMoveException {
-        for(String move : splitAlgorithm(algorithm)) {
-            appendMove(move);
-        }
-    }
-
-    public void appendAlgorithms(String[] algorithms) throws InvalidMoveException {
-        for(String algorithm : algorithms) {
-            appendAlgorithm(algorithm);
-        }
-    }
-
-    public PuzzleState getState() {
-        assert states.size() == moves.size() + 1;
-        return states.get(states.size() - 1);
-    }
-
-    public int getTotalCost() {
-        return totalCost;
-    }
-
-    public String toString() {
-        return String.join(" ", moves);
-    }
-
-    public PuzzleStateAndGenerator getStateAndGenerator() {
-        return new PuzzleStateAndGenerator(getState(), toString());
-    }
-
-    public static String[] splitAlgorithm(String algorithm) {
-        if(algorithm.trim().isEmpty()) {
-            return new String[0];
-        }
-        return algorithm.split("\\s+");
     }
 
 }

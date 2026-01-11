@@ -1,48 +1,15 @@
 package cs.sq12phase;
 
-import java.util.*;
+import java.util.Random;
 
 public class FullCube implements Comparable<FullCube> {
 
-    int ul = 0x011233;
-    int ur = 0x455677;
-    int dl = 0x998bba;
-    int dr = 0xddcffe;
-    int ml = 0;
-
-    public int compareTo(FullCube f) {
-        if (ul != f.ul) {
-            return ul - f.ul;
-        }
-        if (ur != f.ur) {
-            return ur - f.ur;
-        }
-        if (dl != f.dl) {
-            return dl - f.dl;
-        }
-        if (dr != f.dr) {
-            return dr - f.dr;
-        }
-        return ml - f.ml;
-    }
+    static Random r = new Random();
 
     static {
         Search.init();
     }
 
-    FullCube(String s) {
-        //TODO
-    }
-
-    public FullCube() {
-
-    }
-
-    boolean isSolved() {
-        return ul == 0x011233 && ur == 0x455677 && dl == 0x998bba && dr == 0xddcffe && ml == 0;
-    }
-
-    static Random r = new Random();
     public static FullCube randomCube() {
         return randomCube(r);
     }
@@ -73,6 +40,41 @@ public class FullCube implements Comparable<FullCube> {
         }
         f.ml = r.nextInt(2);
         return f;
+    }
+    int ul = 0x011233;
+    int ur = 0x455677;
+    int dl = 0x998bba;
+    int dr = 0xddcffe;
+    int ml = 0;
+    int[] arr = new int[16];
+    byte[] prm = new byte[8];
+
+    FullCube(String s) {
+        //TODO
+    }
+
+    public FullCube() {
+
+    }
+
+    public int compareTo(FullCube f) {
+        if (ul != f.ul) {
+            return ul - f.ul;
+        }
+        if (ur != f.ur) {
+            return ur - f.ur;
+        }
+        if (dl != f.dl) {
+            return dl - f.dl;
+        }
+        if (dr != f.dr) {
+            return dr - f.dr;
+        }
+        return ml - f.ml;
+    }
+
+    boolean isSolved() {
+        return ul == 0x011233 && ur == 0x455677 && dl == 0x998bba && dr == 0xddcffe && ml == 0;
     }
 
     void copy(FullCube c) {
@@ -111,7 +113,7 @@ public class FullCube implements Comparable<FullCube> {
             int temp = dl;
             dl = (dl << move | dr >> (24 - move)) & 0xffffff;
             dr = (dr << move | temp >> (24 - move)) & 0xffffff;
-        } else if (move < -24) {
+        } else {
             move = 48 + move;
             int temp = dl;
             dl = (dl >> move | dr << (24 - move)) & 0xffffff;
@@ -151,8 +153,6 @@ public class FullCube implements Comparable<FullCube> {
         }
     }
 
-    int[] arr = new int[16];
-
     int getParity() {
         int cnt = 0;
         arr[0] = pieceAt(0);
@@ -163,7 +163,7 @@ public class FullCube implements Comparable<FullCube> {
         }
         int p = 0;
         for (int a = 0; a < 16; a++) {
-            for (int b = a + 1 ; b < 16 ; b++) {
+            for (int b = a + 1; b < 16; b++) {
                 if (arr[a] > arr[b]) {
                     p ^= 1;
                 }
@@ -199,8 +199,6 @@ public class FullCube implements Comparable<FullCube> {
         System.out.println(Integer.toHexString(dr));
     }
 
-    byte[] prm = new byte[8];
-
     void getSquare(Square sq) {
         for (int a = 0; a < 8; a++) {
             prm[a] = (byte) (pieceAt(a * 3 + 1) >> 1);
@@ -213,14 +211,14 @@ public class FullCube implements Comparable<FullCube> {
         sq.topEdgeFirst = pieceAt(0) == pieceAt(1);
         a = sq.topEdgeFirst ? 2 : 0;
         for (b = 0; b < 4; a += 3, b++) {
-            prm[b] = (byte)(pieceAt(a) >> 1);
+            prm[b] = (byte) (pieceAt(a) >> 1);
         }
 
         sq.botEdgeFirst = pieceAt(12) == pieceAt(13);
         a = sq.botEdgeFirst ? 14 : 12;
 
-        for ( ; b < 8; a += 3, b++) {
-            prm[b] = (byte)(pieceAt(a) >> 1);
+        for (; b < 8; a += 3, b++) {
+            prm[b] = (byte) (pieceAt(a) >> 1);
         }
         sq.edgeperm = Square.get8Perm(prm);
         sq.ml = ml;

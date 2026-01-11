@@ -8,9 +8,9 @@ public class PathIterator {
     public static final int SEG_CLOSE = 4;
 
     public static final String SVG_LANGUAGE_COMMANDS = "MLTCZ";
-
-    private int index;
     private final List<Path.Command> commands;
+    private int index;
+
     public PathIterator(Path p) {
         index = 0;
         commands = p.commands;
@@ -27,9 +27,7 @@ public class PathIterator {
     public int currentSegment(double[] coords) {
         Path.Command command = commands.get(index);
         assert coords.length >= command.coords.length;
-        for(int i = 0; i < command.coords.length; i++) {
-            coords[i] = command.coords[i];
-        }
+        System.arraycopy(command.coords, 0, coords, 0, command.coords.length);
         return command.type;
     }
 

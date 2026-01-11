@@ -1,28 +1,21 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
-import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
-import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+
 import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
+import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
 
 @Export
 public class NoInspectionFiveByFiveCubePuzzle extends CubePuzzle {
-    public NoInspectionFiveByFiveCubePuzzle() {
-        super(5);
-    }
-
-    @Override
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
-        CubeMove[][] randomOrientationMoves = getRandomOrientationMoves(size /2);
-        CubeMove[] randomOrientation = randomOrientationMoves[r.nextInt(randomOrientationMoves.length)];
-        PuzzleStateAndGenerator psag = super.generateRandomMoves(r);
-        psag = applyOrientation(this, randomOrientation, psag, true);
-        return psag;
-    }
-
-    public static PuzzleStateAndGenerator applyOrientation(CubePuzzle puzzle, CubeMove[] randomOrientation, PuzzleStateAndGenerator psag, boolean discardRedundantMoves) {
-        if(randomOrientation.length == 0) {
+    public static PuzzleStateAndGenerator applyOrientation(
+        CubePuzzle puzzle,
+        CubeMove[] randomOrientation,
+        PuzzleStateAndGenerator psag,
+        boolean discardRedundantMoves
+    ) {
+        if (randomOrientation.length == 0) {
             // No reorientation required
             return psag;
         }
@@ -37,20 +30,33 @@ public class NoInspectionFiveByFiveCubePuzzle extends CubePuzzle {
             // with no redundant turns, and I can't see how it could hurt the
             // quality of our scrambles to do this.
             String firstReorientMove = randomOrientation[0].toString();
-            while(ab.isRedundant(firstReorientMove)) {
+            while (ab.isRedundant(firstReorientMove)) {
                 assert discardRedundantMoves;
                 AlgorithmBuilder.IndexAndMove im = ab.findBestIndexForMove(firstReorientMove, AlgorithmBuilder.MergingMode.CANONICALIZE_MOVES);
                 ab.popMove(im.index);
             }
-            for(CubeMove cm : randomOrientation) {
+            for (CubeMove cm : randomOrientation) {
                 ab.appendMove(cm.toString());
             }
 
             psag = ab.getStateAndGenerator();
             return psag;
-        } catch(InvalidMoveException e) {
+        } catch (InvalidMoveException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public NoInspectionFiveByFiveCubePuzzle() {
+        super(5);
+    }
+
+    @Override
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+        CubeMove[][] randomOrientationMoves = getRandomOrientationMoves(size / 2);
+        CubeMove[] randomOrientation = randomOrientationMoves[r.nextInt(randomOrientationMoves.length)];
+        PuzzleStateAndGenerator psag = super.generateRandomMoves(r);
+        psag = applyOrientation(this, randomOrientation, psag, true);
+        return psag;
     }
 
     @Override

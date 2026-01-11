@@ -1,10 +1,11 @@
 package org.worldcubeassociation.tnoodle.scrambleanalysis;
 
-import cs.min2phase.Search;
-import cs.min2phase.SearchWCA;
+import static org.worldcubeassociation.tnoodle.scrambleanalysis.utils.StringUtils.stringCompareIgnoringOrder;
+
 import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
 
-import static org.worldcubeassociation.tnoodle.scrambleanalysis.utils.StringUtils.stringCompareIgnoringOrder;
+import cs.min2phase.Search;
+import cs.min2phase.SearchWCA;
 
 public class CubeHelper {
     // For 3x3 only.
@@ -22,7 +23,8 @@ public class CubeHelper {
     // DF, DL, DR, DB
     // FL, FR
     // BR, BL
-    private static final int[] edgesIndex = {1, 3, 5, 7, // U edges index
+    private static final int[] edgesIndex = {
+        1, 3, 5, 7, // U edges index
         28, 30, 32, 34, // D edges index
         21, 23, // Equator front
         48, 50 // Equator back
@@ -30,7 +32,8 @@ public class CubeHelper {
 
     // Each edge has 2 stickers. This array represents, respectively, the index of
     // the other attached sticker.
-    private static final int[] attachedEdgesIndex = {46, 37, 10, 19, // Attached to the U face.
+    private static final int[] attachedEdgesIndex = {
+        46, 37, 10, 19, // Attached to the U face.
         25, 43, 16, 52, // Attached to the D face
         41, 12, // Attached to Equator front
         14, 39 // Attached to Equator back
@@ -39,13 +42,18 @@ public class CubeHelper {
     // Again, an order to corners
     // UBL, UBR, UFL, UFR,
     // DFL, DFR, DBL, DBR
-    private static final int[] cornersIndex = {0, 2, 6, 8, // U corners
-        27, 29, 33, 35}; // D corners
-    private static final int[] cornersIndexClockWise = {36, 45, 18, 9, // U twist clockwise
+    private static final int[] cornersIndex = {
+        0, 2, 6, 8, // U corners
+        27, 29, 33, 35
+    }; // D corners
+    private static final int[] cornersIndexClockWise = {
+        36, 45, 18, 9, // U twist clockwise
         44, 26, 53, 17, // D stickers
     };
-    private static final int[] cornersIndexCounterClockWise = {47, 11, 38, 20, // U twists
-        24, 15, 42, 51}; // D twists
+    private static final int[] cornersIndexCounterClockWise = {
+        47, 11, 38, 20, // U twists
+        24, 15, 42, 51
+    }; // D twists
 
     /**
      * Count misoriented edges considering the FB axis.
@@ -75,8 +83,8 @@ public class CubeHelper {
         char color;
         char attachedColor;
 
-        char uColor = representation.charAt(central + 0 * stickersPerFace);
-        char rColor = representation.charAt(central + 1 * stickersPerFace);
+        char uColor = representation.charAt(central);
+        char rColor = representation.charAt(central + stickersPerFace);
         // char fColor = representation.charAt(central + 2 * stickersPerFace);
         char dColor = representation.charAt(central + 3 * stickersPerFace);
         char lColor = representation.charAt(central + 4 * stickersPerFace);
@@ -112,8 +120,8 @@ public class CubeHelper {
      * @throws RepresentationException
      */
     public static int getCornerOrientationNumber(String representation, int cornerIndex)
-        throws RepresentationException {
-        char uColor = representation.charAt(central + 0 * stickersPerFace);
+    throws RepresentationException {
+        char uColor = representation.charAt(central);
         char dColor = representation.charAt(central + 3 * stickersPerFace);
 
         int index = cornersIndex[cornerIndex];
@@ -168,17 +176,6 @@ public class CubeHelper {
         int cornerParity = search.cc.getCornerParityBit();
 
         return edgeParity == 1 || cornerParity == 1;
-    }
-
-    // Actually, these next 2 methods did not need to be public, but it's for
-    // consistency with the
-    // getFinalLocationOfEdheSticker method.
-    public int[] getEdgesIndex() {
-        return edgesIndex;
-    }
-
-    public int[] getAttachedEdgesIndex() {
-        return attachedEdgesIndex;
     }
 
     /**
@@ -269,5 +266,16 @@ public class CubeHelper {
         }
 
         throw new RepresentationException();
+    }
+
+    // Actually, these next 2 methods did not need to be public, but it's for
+    // consistency with the
+    // getFinalLocationOfEdheSticker method.
+    public int[] getEdgesIndex() {
+        return edgesIndex;
+    }
+
+    public int[] getAttachedEdgesIndex() {
+        return attachedEdgesIndex;
     }
 }

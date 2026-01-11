@@ -75,258 +75,375 @@ Center Cubies:
 
 package cs.threephase;
 
-import java.util.*;
-import static cs.threephase.Moves.*;
-import static cs.threephase.Util.*;
+import static cs.threephase.Center1.syminv;
 import static cs.threephase.Center1.symmove;
 import static cs.threephase.Center1.symmult;
-import static cs.threephase.Center1.syminv;
+import static cs.threephase.Moves.b0;
+import static cs.threephase.Moves.b1;
+import static cs.threephase.Moves.b2;
+import static cs.threephase.Moves.b3;
+import static cs.threephase.Moves.b4;
+import static cs.threephase.Moves.b5;
+import static cs.threephase.Moves.b6;
+import static cs.threephase.Moves.b7;
+import static cs.threephase.Moves.b8;
+import static cs.threephase.Moves.b9;
+import static cs.threephase.Moves.ba;
+import static cs.threephase.Moves.bb;
+import static cs.threephase.Moves.bc;
+import static cs.threephase.Moves.bd;
+import static cs.threephase.Moves.be;
+import static cs.threephase.Moves.bf;
+import static cs.threephase.Moves.d0;
+import static cs.threephase.Moves.d1;
+import static cs.threephase.Moves.d2;
+import static cs.threephase.Moves.d3;
+import static cs.threephase.Moves.d4;
+import static cs.threephase.Moves.d5;
+import static cs.threephase.Moves.d6;
+import static cs.threephase.Moves.d7;
+import static cs.threephase.Moves.d8;
+import static cs.threephase.Moves.d9;
+import static cs.threephase.Moves.da;
+import static cs.threephase.Moves.db;
+import static cs.threephase.Moves.dc;
+import static cs.threephase.Moves.dd;
+import static cs.threephase.Moves.de;
+import static cs.threephase.Moves.df;
+import static cs.threephase.Moves.dx1;
+import static cs.threephase.Moves.f0;
+import static cs.threephase.Moves.f1;
+import static cs.threephase.Moves.f2;
+import static cs.threephase.Moves.f3;
+import static cs.threephase.Moves.f4;
+import static cs.threephase.Moves.f5;
+import static cs.threephase.Moves.f6;
+import static cs.threephase.Moves.f7;
+import static cs.threephase.Moves.f8;
+import static cs.threephase.Moves.f9;
+import static cs.threephase.Moves.fa;
+import static cs.threephase.Moves.fb;
+import static cs.threephase.Moves.fc;
+import static cs.threephase.Moves.fd;
+import static cs.threephase.Moves.fe;
+import static cs.threephase.Moves.ff;
+import static cs.threephase.Moves.l0;
+import static cs.threephase.Moves.l1;
+import static cs.threephase.Moves.l2;
+import static cs.threephase.Moves.l3;
+import static cs.threephase.Moves.l4;
+import static cs.threephase.Moves.l5;
+import static cs.threephase.Moves.l6;
+import static cs.threephase.Moves.l7;
+import static cs.threephase.Moves.l8;
+import static cs.threephase.Moves.l9;
+import static cs.threephase.Moves.la;
+import static cs.threephase.Moves.lb;
+import static cs.threephase.Moves.lc;
+import static cs.threephase.Moves.ld;
+import static cs.threephase.Moves.le;
+import static cs.threephase.Moves.lf;
+import static cs.threephase.Moves.move2str;
+import static cs.threephase.Moves.r0;
+import static cs.threephase.Moves.r1;
+import static cs.threephase.Moves.r2;
+import static cs.threephase.Moves.r3;
+import static cs.threephase.Moves.r4;
+import static cs.threephase.Moves.r5;
+import static cs.threephase.Moves.r6;
+import static cs.threephase.Moves.r7;
+import static cs.threephase.Moves.r8;
+import static cs.threephase.Moves.r9;
+import static cs.threephase.Moves.ra;
+import static cs.threephase.Moves.rb;
+import static cs.threephase.Moves.rc;
+import static cs.threephase.Moves.rd;
+import static cs.threephase.Moves.re;
+import static cs.threephase.Moves.rf;
+import static cs.threephase.Moves.u0;
+import static cs.threephase.Moves.u1;
+import static cs.threephase.Moves.u2;
+import static cs.threephase.Moves.u3;
+import static cs.threephase.Moves.u4;
+import static cs.threephase.Moves.u5;
+import static cs.threephase.Moves.u6;
+import static cs.threephase.Moves.u7;
+import static cs.threephase.Moves.u8;
+import static cs.threephase.Moves.u9;
+import static cs.threephase.Moves.ua;
+import static cs.threephase.Moves.ub;
+import static cs.threephase.Moves.uc;
+import static cs.threephase.Moves.ud;
+import static cs.threephase.Moves.ue;
+import static cs.threephase.Moves.uf;
+
+import java.util.Comparator;
+import java.util.Random;
 
 public class FullCube implements Comparable<FullCube> {
 
-	static final byte[] centerFacelet = {u5, u6, ua, u9, d5, d6, da, d9, f5, f6, fa, f9, b5, b6, ba, b9, r5, r6, ra, r9, l5, l6, la, l9};
-	static final byte[][] edgeFacelet = {
-		{ud, f1}, {u4, l1}, {u2, b1}, {ub, r1}, {dd, be}, {d4, le}, {d2, fe}, {db, re}, {lb, f8}, {l4, b7}, {rb, b8}, {r4, f7},
-		{f2, ue}, {l2, u8}, {b2, u1}, {r2, u7}, {bd, de}, {ld, d8}, {fd, d1}, {rd, d7}, {f4, l7}, {bb, l8}, {b4, r7}, {fb, r8}};
-	static final byte[][] cornerFacelet = { { uf, r0, f3 }, { uc, f0, l3 }, { u0, l0, b3 }, { u3, b0, r3 },
-		{ d3, ff, rc }, { d0, lf, fc }, { dc, bf, lc }, { df, rf, bc } };
+    static final byte[] centerFacelet = { u5, u6, ua, u9, d5, d6, da, d9, f5, f6, fa, f9, b5, b6, ba, b9, r5, r6, ra, r9, l5, l6, la, l9 };
+    static final byte[][] edgeFacelet = {
+        { ud, f1 },
+        { u4, l1 },
+        { u2, b1 },
+        { ub, r1 },
+        { dd, be },
+        { d4, le },
+        { d2, fe },
+        { db, re },
+        { lb, f8 },
+        { l4, b7 },
+        { rb, b8 },
+        { r4, f7 },
+        { f2, ue },
+        { l2, u8 },
+        { b2, u1 },
+        { r2, u7 },
+        { bd, de },
+        { ld, d8 },
+        { fd, d1 },
+        { rd, d7 },
+        { f4, l7 },
+        { bb, l8 },
+        { b4, r7 },
+        { fb, r8 }
+    };
+    static final byte[][] cornerFacelet = {
+        { uf, r0, f3 }, { uc, f0, l3 }, { u0, l0, b3 }, { u3, b0, r3 },
+        { d3, ff, rc }, { d0, lf, fc }, { dc, bf, lc }, { df, rf, bc }
+    };
+    private static final int[] move2rot = { 35, 1, 34, 2, 4, 6, 22, 5, 19 };
+    int value = 0;
+    boolean add1 = false;
+    int length1 = 0;
+    int length2 = 0;
+    int length3 = 0;
+    byte[] moveBuffer = new byte[60];
+    int sym = 0;
+    private final EdgeCube edge;
+    private final CenterCube center;
+    private final CornerCube corner;
+    private int moveLength = 0;
+    private int edgeAvail = 0;
+    private int centerAvail = 0;
+    private int cornerAvail = 0;
 
+    public FullCube(byte[] f) {
+        edge = new EdgeCube();
+        center = new CenterCube();
+        corner = new CornerCube();
+        for (int i = 0; i < 24; i++) {
+            center.ct[i] = f[centerFacelet[i]];
+        }
+        for (int i = 0; i < 24; i++) {
+            for (byte j = 0; j < 24; j++) {
+                if (f[edgeFacelet[i][0]] == edgeFacelet[j][0] / 16 && f[edgeFacelet[i][1]] == edgeFacelet[j][1] / 16) {
+                    edge.ep[i] = j;
+                }
+            }
+        }
+        byte col1, col2, ori;
+        for (byte i = 0; i < 8; i++) {
+            // get the colors of the cubie at corner i, starting with U/D
+            for (ori = 0; ori < 3; ori++) {
+                if (f[cornerFacelet[i][ori]] == u0 / 16 || f[cornerFacelet[i][ori]] == d0 / 16) {
+                    break;
+                }
+            }
+            col1 = f[cornerFacelet[i][(ori + 1) % 3]];
+            col2 = f[cornerFacelet[i][(ori + 2) % 3]];
 
-	public FullCube(byte[] f) {
-		edge = new EdgeCube();
-		center = new CenterCube();
-		corner = new CornerCube();
-		for (int i=0; i<24; i++) {
-			center.ct[i] = f[centerFacelet[i]];
-		}
-		for (int i=0; i<24; i++) {
-			for (byte j=0; j<24; j++) {
-				if (f[edgeFacelet[i][0]] == edgeFacelet[j][0]/16 && f[edgeFacelet[i][1]] == edgeFacelet[j][1]/16) {
-					edge.ep[i] = j;
-				}
-			}
-		}
-		byte col1, col2, ori;
-		for (byte i=0; i<8; i++) {
-			// get the colors of the cubie at corner i, starting with U/D
-			for (ori = 0; ori < 3; ori++)
-				if (f[cornerFacelet[i][ori]] == u0/16 || f[cornerFacelet[i][ori]] == d0/16)
-					break;
-			col1 = f[cornerFacelet[i][(ori + 1) % 3]];
-			col2 = f[cornerFacelet[i][(ori + 2) % 3]];
+            for (byte j = 0; j < 8; j++) {
+                if (col1 == cornerFacelet[j][1] / 16 && col2 == cornerFacelet[j][2] / 16) {
+                    // in cornerposition i we have cornercubie j
+                    corner.cp[i] = j;
+                    corner.co[i] = (byte) (ori % 3);
+                    break;
+                }
+            }
+        }
+    }
 
-			for (byte j=0; j<8; j++) {
-				if (col1 == cornerFacelet[j][1]/16 && col2 == cornerFacelet[j][2]/16) {
-					// in cornerposition i we have cornercubie j
-					corner.cp[i] = j;
-					corner.co[i] = (byte) (ori % 3);
-					break;
-				}
-			}
-		}
-	}
+    public FullCube() {
+        edge = new EdgeCube();
+        center = new CenterCube();
+        corner = new CornerCube();
+    }
 
-	void toFacelet(byte[] f) {
-		for (int i=0; i<24; i++) {
-			f[centerFacelet[i]] = center.ct[i];
-		}
-		for (int i=0; i<24; i++) {
-			f[edgeFacelet[i][0]] = (byte) (edgeFacelet[edge.ep[i]][0]/16);
-			f[edgeFacelet[i][1]] = (byte) (edgeFacelet[edge.ep[i]][1]/16);
-		}
-		for (byte c=0; c<8; c++) {
-			byte j = corner.cp[c];
-			byte ori = corner.co[c];
-			for (byte n=0; n<3; n++)
-				f[cornerFacelet[c][(n + ori) % 3]] = (byte) (cornerFacelet[j][n]/16);
-		}
-	}
+    public FullCube(FullCube c) {
+        this();
+        copy(c);
+    }
 
-	@Override
-	public String toString() {
-		getEdge();
-		getCenter();
-		getCorner();
+    public FullCube(Random r) {
+        edge = new EdgeCube(r);
+        center = new CenterCube(r);
+        corner = new CornerCube(r);
+    }
 
-		byte[] f = new byte[96];
-		StringBuffer sb = new StringBuffer();
-		toFacelet(f);
-		for (int i=0; i<96; i++) {
-			sb.append("URFDLB".charAt(f[i]));
-			if (i % 4 == 3) {
-				sb.append('\n');
-			}
-			if (i % 16 == 15) {
-				sb.append('\n');
-			}
-		}
-		return sb.toString();
-	}
+    public FullCube(int[] moveseq) {
+        this();
+        for (int m : moveseq) {
+            doMove(m);
+        }
+    }
 
-	public static class ValueComparator implements Comparator<FullCube> {
-		public int compare(FullCube c1, FullCube c2) {
-			return c2.value - c1.value;
-		}
-	}
+    void toFacelet(byte[] f) {
+        for (int i = 0; i < 24; i++) {
+            f[centerFacelet[i]] = center.ct[i];
+        }
+        for (int i = 0; i < 24; i++) {
+            f[edgeFacelet[i][0]] = (byte) (edgeFacelet[edge.ep[i]][0] / 16);
+            f[edgeFacelet[i][1]] = (byte) (edgeFacelet[edge.ep[i]][1] / 16);
+        }
+        for (byte c = 0; c < 8; c++) {
+            byte j = corner.cp[c];
+            byte ori = corner.co[c];
+            for (byte n = 0; n < 3; n++) {
+                f[cornerFacelet[c][(n + ori) % 3]] = (byte) (cornerFacelet[j][n] / 16);
+            }
+        }
+    }
 
-	private EdgeCube edge;
-	private CenterCube center;
-	private CornerCube corner;
+    @Override
+    public String toString() {
+        getEdge();
+        getCenter();
+        getCorner();
 
-	int value = 0;
-	boolean add1 = false;
-	int length1 = 0;
-	int length2 = 0;
-	int length3 = 0;
+        byte[] f = new byte[96];
+        StringBuilder sb = new StringBuilder();
+        toFacelet(f);
+        for (int i = 0; i < 96; i++) {
+            sb.append("URFDLB".charAt(f[i]));
+            if (i % 4 == 3) {
+                sb.append('\n');
+            }
+            if (i % 16 == 15) {
+                sb.append('\n');
+            }
+        }
+        return sb.toString();
+    }
 
-	@Override
-	public int compareTo(FullCube c) {
-		return value - c.value;
-	}
+    @Override
+    public int compareTo(FullCube c) {
+        return value - c.value;
+    }
 
-	public FullCube() {
-		edge = new EdgeCube();
-		center = new CenterCube();
-		corner = new CornerCube();
-	}
+    public void copy(FullCube c) {
+        edge.copy(c.edge);
+        center.copy(c.center);
+        corner.copy(c.corner);
 
-	public FullCube(FullCube c) {
-		this();
-		copy(c);
-	}
+        this.value = c.value;
+        this.add1 = c.add1;
+        this.length1 = c.length1;
+        this.length2 = c.length2;
+        this.length3 = c.length3;
 
-	public FullCube(Random r) {
-		edge = new EdgeCube(r);
-		center = new CenterCube(r);
-		corner = new CornerCube(r);
-	}
+        this.sym = c.sym;
 
-	public FullCube(int[] moveseq) {
-		this();
-		for (int m : moveseq) {
-			doMove(m);
-		}
-	}
+        System.arraycopy(c.moveBuffer, 0, this.moveBuffer, 0, 60);
+        this.moveLength = c.moveLength;
+        this.edgeAvail = c.edgeAvail;
+        this.centerAvail = c.centerAvail;
+        this.cornerAvail = c.cornerAvail;
+    }
 
-	public void copy(FullCube c) {
-		edge.copy(c.edge);
-		center.copy(c.center);
-		corner.copy(c.corner);
+    public boolean checkEdge() {
+        return getEdge().checkEdge();
+    }
 
-		this.value = c.value;
-		this.add1 = c.add1;
-		this.length1 = c.length1;
-		this.length2 = c.length2;
-		this.length3 = c.length3;
+    public String getMoveString(boolean inverse, boolean rotation) {
+        int[] fixedMoves = new int[moveLength - (add1 ? 2 : 0)];
+        int idx = 0;
+        for (int i = 0; i < length1; i++) {
+            fixedMoves[idx++] = moveBuffer[i];
+        }
+        int sym = this.sym;
+        for (int i = length1 + (add1 ? 2 : 0); i < moveLength; i++) {
+            if (symmove[sym][moveBuffer[i]] >= dx1) {
+                fixedMoves[idx++] = symmove[sym][moveBuffer[i]] - 9;
+                int rot = move2rot[symmove[sym][moveBuffer[i]] - dx1];
+                sym = symmult[sym][rot];
+            } else {
+                fixedMoves[idx++] = symmove[sym][moveBuffer[i]];
+            }
+        }
+        int finishSym = symmult[syminv[sym]][Center1.getSolvedSym(getCenter())];
 
-		this.sym = c.sym;
+        StringBuilder sb = new StringBuilder();
+        sym = finishSym;
+        if (inverse) {
+            for (int i = idx - 1; i >= 0; i--) {
+                int move = fixedMoves[i];
+                move = move / 3 * 3 + (2 - move % 3);
+                if (symmove[sym][move] >= dx1) {
+                    sb.append(move2str[symmove[sym][move] - 9]).append(' ');
+                    int rot = move2rot[symmove[sym][move] - dx1];
+                    sym = symmult[sym][rot];
+                } else {
+                    sb.append(move2str[symmove[sym][move]]).append(' ');
+                }
+            }
+            if (rotation) {
+                sb.append(Center1.rot2str[syminv[sym]]).append(" ");//cube rotation after solution. for wca scramble, it should be omitted.
+            }
+        } else {
+            for (int i = 0; i < idx; i++) {
+                sb.append(move2str[fixedMoves[i]]).append(' ');
+            }
+            if (rotation) {
+                sb.append(Center1.rot2str[finishSym]);//cube rotation after solution.
+            }
+        }
+        return sb.toString();
+    }
 
-		for (int i=0; i<60; i++) {
-			this.moveBuffer[i] = c.moveBuffer[i];
-		}
-		this.moveLength = c.moveLength;
-		this.edgeAvail = c.edgeAvail;
-		this.centerAvail = c.centerAvail;
-		this.cornerAvail = c.cornerAvail;
-	}
+    String to333Facelet() {
+        char[] ret = new char[54];
+        getEdge().fill333Facelet(ret);
+        getCenter().fill333Facelet(ret);
+        getCorner().fill333Facelet(ret);
+        return new String(ret);
+    }
 
-	public boolean checkEdge() {
-		return getEdge().checkEdge();
-	}
+    void move(int m) {
+        moveBuffer[moveLength++] = (byte) m;
+    }
 
-	public String getMoveString(boolean inverse, boolean rotation) {
-		int[] fixedMoves = new int[moveLength - (add1 ? 2 : 0)];
-		int idx = 0;
-		for (int i=0; i<length1; i++) {
-			fixedMoves[idx++] = moveBuffer[i];
-		}
-		int sym = this.sym;
-		for (int i=length1 + (add1 ? 2 : 0); i<moveLength; i++) {
-			if (symmove[sym][moveBuffer[i]] >= dx1) {
-				fixedMoves[idx++] = symmove[sym][moveBuffer[i]] - 9;
-				int rot = move2rot[symmove[sym][moveBuffer[i]] - dx1];
-				sym = symmult[sym][rot];
-			} else {
-				fixedMoves[idx++] = symmove[sym][moveBuffer[i]];
-			}
-		}
-		int finishSym = symmult[syminv[sym]][Center1.getSolvedSym(getCenter())];
+    void doMove(int m) {
+        getEdge().move(m);
+        getCenter().move(m);
+        getCorner().move(m % 18);
+    }
 
-		StringBuffer sb = new StringBuffer();
-		sym = finishSym;
-		if (inverse) {
-			for (int i=idx-1; i>=0; i--) {
-				int move = fixedMoves[i];
-				move = move / 3 * 3 + (2 - move % 3);
-				if (symmove[sym][move] >= dx1) {
-					sb.append(move2str[symmove[sym][move] - 9]).append(' ');
-					int rot = move2rot[symmove[sym][move] - dx1];
-					sym = symmult[sym][rot];
-				} else {
-					sb.append(move2str[symmove[sym][move]]).append(' ');
-				}
-			}
-			if (rotation) {
-				sb.append(Center1.rot2str[syminv[sym]] + " ");//cube rotation after solution. for wca scramble, it should be omitted.
-			}
-		} else {
-			for (int i=0; i<idx; i++) {
-				sb.append(move2str[fixedMoves[i]]).append(' ');
-			}
-			if (rotation) {
-				sb.append(Center1.rot2str[finishSym]);//cube rotation after solution.
-			}
-		}
-		return sb.toString();
-	}
+    EdgeCube getEdge() {
+        while (edgeAvail < moveLength) {
+            edge.move(moveBuffer[edgeAvail++]);
+        }
+        return edge;
+    }
 
-	private static int[] move2rot = {35, 1, 34, 2, 4, 6, 22, 5, 19};
+    CenterCube getCenter() {
+        while (centerAvail < moveLength) {
+            center.move(moveBuffer[centerAvail++]);
+        }
+        return center;
+    }
 
-	String to333Facelet() {
-		char[] ret = new char[54];
-		getEdge().fill333Facelet(ret);
-		getCenter().fill333Facelet(ret);
-		getCorner().fill333Facelet(ret);
-		return new String(ret);
-	}
+    CornerCube getCorner() {
+        while (cornerAvail < moveLength) {
+            corner.move(moveBuffer[cornerAvail++] % 18);
+        }
+        return corner;
+    }
 
-	byte[] moveBuffer = new byte[60];
-	private int moveLength = 0;
-	private int edgeAvail = 0;
-	private int centerAvail = 0;
-	private int cornerAvail = 0;
-
-	int sym = 0;
-
-	void move(int m) {
-		moveBuffer[moveLength++] = (byte)m;
-		return;
-	}
-
-	void doMove(int m) {
-		getEdge().move(m);
-		getCenter().move(m);
-		getCorner().move(m % 18);
-	}
-
-	EdgeCube getEdge() {
-		while (edgeAvail < moveLength) {
-			edge.move(moveBuffer[edgeAvail++]);
-		}
-		return edge;
-	}
-
-	CenterCube getCenter() {
-		while (centerAvail < moveLength) {
-			center.move(moveBuffer[centerAvail++]);
-		}
-		return center;
-	}
-
-	CornerCube getCorner() {
-		while (cornerAvail < moveLength) {
-			corner.move(moveBuffer[cornerAvail++] % 18);
-		}
-		return corner;
-	}
+    public static class ValueComparator implements Comparator<FullCube> {
+        public int compare(FullCube c1, FullCube c2) {
+            return c2.value - c1.value;
+        }
+    }
 }

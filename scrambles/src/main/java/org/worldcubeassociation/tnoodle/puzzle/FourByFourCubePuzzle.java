@@ -2,14 +2,15 @@ package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
 
-import cs.threephase.Edge3;
-import cs.threephase.Search;
+import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder.MergingMode;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-import org.timepedia.exporter.client.Export;
+
+import cs.threephase.Edge3;
+import cs.threephase.Search;
 
 @Export
 public class FourByFourCubePuzzle extends CubePuzzle {

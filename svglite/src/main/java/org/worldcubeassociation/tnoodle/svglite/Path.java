@@ -5,24 +5,6 @@ import java.util.List;
 
 public class Path extends Element {
 
-    static class Command {
-        int type;
-        double[] coords;
-        public Command(int type, double[] coords) {
-            this.type = type;
-            this.coords = coords;
-        }
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(PathIterator.SVG_LANGUAGE_COMMANDS.charAt(type));
-            for(int i = 0; coords != null && i < coords.length; i++) {
-                sb.append(" ");
-                sb.append(coords[i]);
-            }
-            return sb.toString();
-        }
-    }
-
     protected List<Command> commands = null;
 
     public Path() {
@@ -31,7 +13,7 @@ public class Path extends Element {
 
     public Path(Path p) {
         super(p);
-        if(p.commands != null) {
+        if (p.commands != null) {
             this.commands = new ArrayList<>(p.commands);
         }
     }
@@ -41,7 +23,7 @@ public class Path extends Element {
     }
 
     public void moveTo(double x, double y) {
-        if(commands == null) {
+        if (commands == null) {
             commands = new ArrayList<>();
         }
 
@@ -70,8 +52,8 @@ public class Path extends Element {
     }
 
     public void translate(double x, double y) {
-        for(Command c : commands) {
-            switch(c.type) {
+        for (Command c : commands) {
+            switch (c.type) {
                 case PathIterator.SEG_MOVETO:
                 case PathIterator.SEG_LINETO:
                     c.coords[0] += x;
@@ -87,10 +69,10 @@ public class Path extends Element {
 
     public String getD() {
         StringBuilder sb = new StringBuilder();
-        for(Command c : commands) {
+        for (Command c : commands) {
             sb.append(" ").append(c.toString());
         }
-        if(sb.length() == 0) {
+        if (sb.isEmpty()) {
             return "";
         }
         return sb.substring(1);
@@ -101,5 +83,25 @@ public class Path extends Element {
         // our "d" attribute first.
         setAttribute("d", getD());
         super.buildString(sb, level);
+    }
+
+    static class Command {
+        int type;
+        double[] coords;
+
+        public Command(int type, double[] coords) {
+            this.type = type;
+            this.coords = coords;
+        }
+
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(PathIterator.SVG_LANGUAGE_COMMANDS.charAt(type));
+            for (int i = 0; coords != null && i < coords.length; i++) {
+                sb.append(" ");
+                sb.append(coords[i]);
+            }
+            return sb.toString();
+        }
     }
 }

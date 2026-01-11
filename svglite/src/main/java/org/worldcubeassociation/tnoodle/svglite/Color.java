@@ -2,14 +2,18 @@ package org.worldcubeassociation.tnoodle.svglite;
 
 public class Color {
     public static final Color RED = new Color(255, 0, 0);
-    public static final Color GREEN = new Color(0, 255,  0);
+    public static final Color GREEN = new Color(0, 255, 0);
     public static final Color BLUE = new Color(0, 0, 255);
     public static final Color WHITE = new Color(255, 255, 255);
     public static final Color BLACK = new Color(0, 0, 0);
     public static final Color GRAY = new Color(128, 128, 128);
     public final static Color YELLOW = new Color(255, 255, 0);
 
-    private int r, g, b, a;
+    private final int r;
+    private final int g;
+    private final int b;
+    private final int a;
+
     public Color(int r, int g, int b, int a) {
         this.r = r;
         this.g = g;
@@ -22,18 +26,24 @@ public class Color {
     }
 
     public Color(int rgba) {
-        this((rgba >>> 8*2) & 0xff,
-             (rgba >>> 8) & 0xff,
-             rgba & 0xff,
-             (rgba >>> 8*3) & 0xff);
+        this(
+            (rgba >>> 8 * 2) & 0xff,
+            (rgba >>> 8) & 0xff,
+            rgba & 0xff,
+            (rgba >>> 8 * 3) & 0xff
+        );
+    }
+
+    public Color(String htmlHex) throws InvalidHexColorException {
+        this(hexToRGB(htmlHex));
     }
 
     private static int hexToRGB(String htmlHex) throws InvalidHexColorException {
-        if(htmlHex.startsWith("#")) {
+        if (htmlHex.startsWith("#")) {
             htmlHex = htmlHex.substring(1);
         }
 
-        switch(htmlHex.length()) {
+        switch (htmlHex.length()) {
             case 3:
                 char c0 = htmlHex.charAt(0);
                 char c1 = htmlHex.charAt(1);
@@ -44,10 +54,6 @@ public class Color {
             default:
                 throw new InvalidHexColorException(htmlHex);
         }
-    }
-
-    public Color(String htmlHex) throws InvalidHexColorException {
-        this(hexToRGB(htmlHex));
     }
 
     public Color invertColor() {
@@ -71,7 +77,7 @@ public class Color {
     }
 
     public int getRGB() {
-        return (a << 8*3) | (r << 8*2) | (g << 8) | b;
+        return (a << 8 * 3) | (r << 8 * 2) | (g << 8) | b;
     }
 
     public String toString() {

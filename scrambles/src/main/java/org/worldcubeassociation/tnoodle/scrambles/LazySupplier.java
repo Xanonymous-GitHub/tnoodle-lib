@@ -3,10 +3,9 @@ package org.worldcubeassociation.tnoodle.scrambles;
 import java.lang.reflect.Constructor;
 
 class LazySupplier<T> {
-    private T instance;
-
     public Class<T> supplyingClass;
     protected Object[] ctorArgs;
+    private T instance;
 
     public LazySupplier(Class<T> supplyingClass, Object... ctorArgs) {
         this.supplyingClass = supplyingClass;

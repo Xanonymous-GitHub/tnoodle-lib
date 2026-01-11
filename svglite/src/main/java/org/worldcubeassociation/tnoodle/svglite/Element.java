@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Element {
 
@@ -12,6 +13,8 @@ public class Element {
     protected Map<String, String> style;
     protected List<Element> children;
     protected String content;
+    private final Transform transform = new Transform();
+
     public Element(String tag) {
         this.tag = tag;
         this.children = new ArrayList<>();
@@ -30,7 +33,7 @@ public class Element {
 
     protected List<Element> copyChildren() {
         List<Element> childrenCopy = new ArrayList<>();
-        for(Element child : children) {
+        for (Element child : children) {
             childrenCopy.add(new Element(child));
         }
         return childrenCopy;
@@ -57,12 +60,12 @@ public class Element {
     }
 
     public String getAttribute(String key) {
-        assert key != "style";
+        assert !Objects.equals(key, "style");
         return attributes.get(key);
     }
 
     public void setAttribute(String key, String value) {
-        assert key != "style";
+        assert !Objects.equals(key, "style");
         attributes.put(key, value);
     }
 
@@ -84,41 +87,39 @@ public class Element {
 
     public String toStyleStr() {
         StringBuilder sb = new StringBuilder();
-        for(String key : style.keySet()) {
+        for (String key : style.keySet()) {
             String value = style.get(key);
             sb.append(" ").append(key).append(":").append(value).append(";");
         }
-        if(sb.length() == 0) {
+        if (sb.isEmpty()) {
             return "";
         }
         return sb.substring(1);
     }
 
     private void addIndentation(StringBuilder sb, int level) {
-        for(int i = 0; i < level; i++) {
-            sb.append("\t");
-        }
+        sb.append("\t".repeat(Math.max(0, level)));
     }
 
     public void buildString(StringBuilder sb, int level) {
         addIndentation(sb, level);
         sb.append("<").append(tag);
-        for(String key : attributes.keySet()) {
+        for (String key : attributes.keySet()) {
             String value = attributes.get(key);
             sb.append(" ");
             sb.append(key).append("=").append('"').append(value).append('"');
         }
-        if(style.size() > 0) {
+        if (!style.isEmpty()) {
             sb.append(" style=\"").append(toStyleStr()).append('"');
         }
-        if(!transform.isIdentity()) {
+        if (!transform.isIdentity()) {
             sb.append(" transform=\"").append(transform.toSvgTransform()).append('"');
         }
         sb.append(">");
-        if(content != null) {
+        if (content != null) {
             sb.append(content);
         }
-        for(Element child : children) {
+        for (Element child : children) {
             sb.append("\n");
             child.buildString(sb, level + 1);
         }
@@ -147,21 +148,20 @@ public class Element {
         setStyle("stroke-linejoin", lineJoin);
     }
 
-    private Transform transform = new Transform();
     public void transform(Transform t) {
         transform.concatenate(t);
     }
 
+    public Transform getTransform() {
+        return new Transform(transform);
+    }
+
     public void setTransform(Transform t) {
-        if(t == null) {
+        if (t == null) {
             transform.setToIdentity();
         } else {
             transform.setTransform(t);
         }
-    }
-
-    public Transform getTransform() {
-        return new Transform(transform);
     }
 
     public void rotate(double radians, double anchorx, double anchory) {

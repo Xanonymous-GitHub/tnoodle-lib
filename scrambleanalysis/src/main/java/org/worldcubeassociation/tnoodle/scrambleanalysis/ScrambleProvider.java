@@ -1,35 +1,34 @@
 package org.worldcubeassociation.tnoodle.scrambleanalysis;
 
-import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
-import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
-import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
+
 public class ScrambleProvider {
+
+    static CubePuzzle defaultCube = new ThreeByThreeCubePuzzle();
 
     public static List<String> getScrambles(String fileName) throws IOException {
         List<String> scrambles = new ArrayList<>();
 
         // Read scrambles
         File file = new File(fileName);
-        Scanner input = new Scanner(file);
 
-        try {
+        try (Scanner input = new Scanner(file)) {
             while (input.hasNextLine()) {
                 String scramble = input.nextLine().trim();
-                if (scramble.length() > 0) {
+                if (!scramble.isEmpty()) {
                     scrambles.add(scramble);
                 }
             }
         } catch (Exception e) {
             throw new IOException("There was an error reading the file.");
-        } finally {
-            input.close();
         }
 
         return scrambles;
@@ -52,13 +51,12 @@ public class ScrambleProvider {
         return scrambles;
     }
 
-    static CubePuzzle defaultCube = new ThreeByThreeCubePuzzle();
-
     public static List<String> generateWcaScrambles(int N) {
         return generateWcaScrambles(defaultCube, N);
     }
 
-    public static List<CubePuzzle.CubeState> convertToCubeStates(List<String> scrambles) throws InvalidScrambleException {
+    public static List<CubePuzzle.CubeState> convertToCubeStates(List<String> scrambles)
+    throws InvalidScrambleException {
         List<CubePuzzle.CubeState> cubeStates = new ArrayList<>(scrambles.size());
         CubePuzzle puzzle = new CubePuzzle(3);
 

@@ -1,6 +1,5 @@
 package cs.sq12phase;
 
-
 public class Search {
     public static final int INVERSE_SOLUTION = 0x2;
 
@@ -9,6 +8,10 @@ public class Search {
     static final int METRIC = WCA_TURN_METRIC; // only available for optimal solver
 
     private static final int PRUN_INC = METRIC == WCA_TURN_METRIC ? 2 : 1;
+
+    static {
+        init();
+    }
 
     int[] move = new int[100];
     FullCube c = null;
@@ -34,8 +37,10 @@ public class Search {
         Square.init();
     }
 
-    static {
-        init();
+    static int count0xf(int val) {
+        val &= val >> 1;
+        val &= val >> 2;
+        return Integer.bitCount(val & 0x11111111);
     }
 
     public String solution(FullCube c, int verbose) {
@@ -71,12 +76,6 @@ public class Search {
 
     public String solutionOpt(FullCube c, int maxl) {
         return solutionOpt(c, maxl, 0);
-    }
-
-    static int count0xf(int val) {
-        val &= val >> 1;
-        val &= val >> 2;
-        return Integer.bitCount(val & 0x11111111);
     }
 
     boolean phase1Opt(int shape, int prunvalue, int maxl, int depth, int lm, int lastTurns) {
@@ -245,8 +244,10 @@ public class Search {
         int corner = sq.cornperm;
         int ml = sq.ml;
 
-        int prun = Math.max(Square.SquarePrun[sq.edgeperm << 1 | ml],
-                            Square.SquarePrun[sq.cornperm << 1 | ml]);
+        int prun = Math.max(
+            Square.SquarePrun[sq.edgeperm << 1 | ml],
+            Square.SquarePrun[sq.cornperm << 1 | ml]
+        );
 
         for (int i = prun; i < maxlen2; i++) {
             if (idaPhase2(edge, corner, sq.topEdgeFirst, sq.botEdgeFirst, ml, i, movelen1, 0)) {
@@ -259,16 +260,14 @@ public class Search {
     }
 
     String move2string(int len) {
-        StringBuffer s = new StringBuffer();
+        StringBuilder s = new StringBuilder();
         int[] outputMoves = new int[len];
         if ((verbose & INVERSE_SOLUTION) != 0) {
             for (int i = len - 1; i >= 0; i--) {
-                outputMoves[len - 1 - i] = move[i] > 0 ? (12 - move[i]) : move[i] < 0 ? (-12  - move[i]) : move[i];
+                outputMoves[len - 1 - i] = move[i] > 0 ? (12 - move[i]) : move[i] < 0 ? (-12 - move[i]) : move[i];
             }
         } else {
-            for (int i = 0; i < len; i++) {
-                outputMoves[i] = move[i];
-            }
+            System.arraycopy(move, 0, outputMoves, 0, len);
         }
 
         int top = 0, bottom = 0;

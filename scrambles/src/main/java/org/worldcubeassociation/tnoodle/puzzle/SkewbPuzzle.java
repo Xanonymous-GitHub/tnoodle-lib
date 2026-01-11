@@ -1,32 +1,46 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import org.worldcubeassociation.tnoodle.svglite.Color;
-import org.worldcubeassociation.tnoodle.svglite.Svg;
-import org.worldcubeassociation.tnoodle.svglite.Dimension;
-import org.worldcubeassociation.tnoodle.svglite.Path;
-import org.worldcubeassociation.tnoodle.svglite.Transform;
-
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.logging.Logger;
 
+import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.puzzle.SkewbSolver.SkewbSolverState;
-
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-
-import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.svglite.Color;
+import org.worldcubeassociation.tnoodle.svglite.Dimension;
+import org.worldcubeassociation.tnoodle.svglite.Path;
+import org.worldcubeassociation.tnoodle.svglite.Svg;
+import org.worldcubeassociation.tnoodle.svglite.Transform;
 
 @Export
 public class SkewbPuzzle extends Puzzle {
     private static final int MIN_SCRAMBLE_LENGTH = 11;
     private static final Logger l = Logger.getLogger(SkewbPuzzle.class.getName());
-    private final SkewbSolver skewbSolver;
-
     private static final int pieceSize = 30;
     private static final int gap = 3;
-
     private static final double sq3d2 = Math.sqrt(3) / 2;
+    /*************************************************************
+     * Functions to display the puzzle
+     */
+
+    private static final Map<String, Color> defaultColorScheme = new HashMap<>();
+
+    static {
+        defaultColorScheme.put("U", Color.WHITE);
+        defaultColorScheme.put("R", Color.BLUE);
+        defaultColorScheme.put("F", Color.RED);
+        defaultColorScheme.put("D", Color.YELLOW);
+        defaultColorScheme.put("L", Color.GREEN);
+        defaultColorScheme.put("B", new Color(0xFF8000));
+    }
+
+    private final SkewbSolver skewbSolver;
 
     public SkewbPuzzle() {
         skewbSolver = new SkewbSolver();
@@ -48,43 +62,35 @@ public class SkewbPuzzle extends Puzzle {
         return new PuzzleStateAndGenerator(pState, scramble);
     }
 
-    /*************************************************************
-     * Functions to display the puzzle
-     */
-
-
-    private static final Map<String, Color> defaultColorScheme = new HashMap<>();
-    static {
-        defaultColorScheme.put("U", Color.WHITE);
-        defaultColorScheme.put("R", Color.BLUE);
-        defaultColorScheme.put("F", Color.RED);
-        defaultColorScheme.put("D", Color.YELLOW);
-        defaultColorScheme.put("L", Color.GREEN);
-        defaultColorScheme.put("B", new Color(0xFF8000));
-    }
-
     @Override
     public Map<String, Color> getDefaultColorScheme() {
         return new HashMap<>(defaultColorScheme);
     }
 
     private Transform[] getFaceTrans() {
-        Transform[] position = {
-            new Transform(pieceSize*sq3d2, -pieceSize/2, pieceSize*sq3d2, pieceSize/2, (pieceSize*4+gap*1.5)*sq3d2, pieceSize),
-            new Transform(pieceSize*sq3d2, -pieceSize/2, 0, pieceSize, (pieceSize*7+gap*3)*sq3d2, pieceSize * 1.5),
-            new Transform(pieceSize*sq3d2, -pieceSize/2, 0, pieceSize, (pieceSize*5+gap*2)*sq3d2, pieceSize * 2.5 + 0.5 * gap),
-            new Transform(0, pieceSize, -pieceSize*sq3d2, -pieceSize/2, (pieceSize*3+gap*1)*sq3d2, pieceSize * 4.5 + 1.5 * gap),
-            new Transform(pieceSize*sq3d2, pieceSize/2, 0, pieceSize, (pieceSize*3+gap*1)*sq3d2, pieceSize * 2.5 + 0.5 * gap),
-            new Transform(pieceSize*sq3d2, pieceSize/2, 0, pieceSize, pieceSize*sq3d2, pieceSize * 1.5),
-        };
-        return position;
+        return new Transform[] {
+            new Transform(
+                pieceSize * sq3d2,
+                (double) -pieceSize / 2,
+                pieceSize * sq3d2,
+                (double) pieceSize / 2,
+                (pieceSize * 4 + gap * 1.5) * sq3d2,
+                pieceSize
+            ),
+            new Transform(pieceSize * sq3d2, (double) -pieceSize / 2, 0, pieceSize, (pieceSize * 7 + gap * 3) * sq3d2, pieceSize * 1.5),
+            new Transform(pieceSize * sq3d2, (double) -pieceSize / 2, 0, pieceSize, (pieceSize * 5 + gap * 2) * sq3d2, pieceSize * 2.5 + 0.5 * gap),
+            new Transform(0, pieceSize, -pieceSize * sq3d2, (double) -pieceSize / 2, (pieceSize * 3 + gap) * sq3d2, pieceSize * 4.5 + 1.5 * gap),
+            new Transform(pieceSize * sq3d2, (double) pieceSize / 2, 0, pieceSize, (pieceSize * 3 + gap) * sq3d2, pieceSize * 2.5 + 0.5 * gap),
+            new Transform(pieceSize * sq3d2, (double) pieceSize / 2, 0, pieceSize, pieceSize * sq3d2, pieceSize * 1.5),
+            };
     }
 
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(
                 (int) Math.ceil((3 * gap + 8 * pieceSize + 1) * sq3d2),
-                (int) Math.ceil(2 * gap + 6 * pieceSize + 1));
+                (int) (double) (2 * gap + 6 * pieceSize + 1)
+        );
     }
 
     @Override
@@ -127,22 +133,22 @@ public class SkewbPuzzle extends Puzzle {
         private final int[][] image = new int[6][5];
 
         SkewbState() {
-            for (int i=0; i<6; i++) {
-                for (int j=0; j<5; j++) {
+            for (int i = 0; i < 6; i++) {
+                for (int j = 0; j < 5; j++) {
                     image[i][j] = i;
                 }
             }
         }
 
         SkewbState(int[][] _image) {
-            for (int i=0; i<6; i++) {
+            for (int i = 0; i < 6; i++) {
                 System.arraycopy(_image[i], 0, image[i], 0, 5);
             }
         }
 
         private void turn(int axis, int pow, int[][] image) {
             //axis:0-R 1-U 2-L 3-B
-            for (int p=0; p<pow; p++) {
+            for (int p = 0; p < pow; p++) {
                 switch (axis) {
                     case 0:
                         swap(2, 0, 3, 0, 1, 0, image);
@@ -190,7 +196,7 @@ public class SkewbPuzzle extends Puzzle {
          */
         private Path[] getFacePaths() {
             Path[] p = new Path[5];
-            for (int i=0; i<5; i++) {
+            for (int i = 0; i < 5; i++) {
                 p[i] = new Path();
                 // In svg, by default, borders are scaled along with shapes.
                 // Setting vector-effect to non-scaling-stroke disables that.
@@ -200,13 +206,29 @@ public class SkewbPuzzle extends Puzzle {
                 // If Batik ever changes to support vector-effect, we
                 // can clean this up.
                 //p[i].setAttribute("vector-effect", "non-scaling-stroke");
-                p[i].setAttribute("stroke-width", 1.0/pieceSize + "px");
+                p[i].setAttribute("stroke-width", 1.0 / pieceSize + "px");
             }
-            p[0].moveTo(-1, 0); p[0].lineTo( 0, 1); p[0].lineTo( 1, 0); p[0].lineTo(0,-1); p[0].closePath();
-            p[1].moveTo(-1, 0); p[1].lineTo(-1,-1); p[1].lineTo( 0,-1); p[1].closePath();
-            p[2].moveTo( 0,-1); p[2].lineTo( 1,-1); p[2].lineTo( 1, 0); p[2].closePath();
-            p[3].moveTo(-1, 0); p[3].lineTo(-1, 1); p[3].lineTo( 0, 1); p[3].closePath();
-            p[4].moveTo( 0, 1); p[4].lineTo( 1, 1); p[4].lineTo( 1, 0); p[4].closePath();
+            p[0].moveTo(-1, 0);
+            p[0].lineTo(0, 1);
+            p[0].lineTo(1, 0);
+            p[0].lineTo(0, -1);
+            p[0].closePath();
+            p[1].moveTo(-1, 0);
+            p[1].lineTo(-1, -1);
+            p[1].lineTo(0, -1);
+            p[1].closePath();
+            p[2].moveTo(0, -1);
+            p[2].lineTo(1, -1);
+            p[2].lineTo(1, 0);
+            p[2].closePath();
+            p[3].moveTo(-1, 0);
+            p[3].lineTo(-1, 1);
+            p[3].lineTo(0, 1);
+            p[3].closePath();
+            p[4].moveTo(0, 1);
+            p[4].lineTo(1, 1);
+            p[4].lineTo(1, 0);
+            p[4].closePath();
             return p;
         }
 
@@ -214,13 +236,13 @@ public class SkewbPuzzle extends Puzzle {
         protected Svg drawScramble(Map<String, Color> colorScheme) {
             Svg g = new Svg(getPreferredSize());
             Color[] scheme = new Color[6];
-            for(int i = 0; i < scheme.length; i++) {
-                scheme[i] = colorScheme.get("URFDLB".charAt(i)+"");
+            for (int i = 0; i < scheme.length; i++) {
+                scheme[i] = colorScheme.get("URFDLB".charAt(i) + "");
             }
             Transform[] position = getFaceTrans();
-            for (int face=0; face<6; face++) {
+            for (int face = 0; face < 6; face++) {
                 Path[] p = getFacePaths();
-                for (int i=0; i<5; i++) {
+                for (int i = 0; i < 5; i++) {
                     p[i].transform(position[face]);
                     p[i].setFill(scheme[image[face][i]]);
                     p[i].setStroke(Color.BLACK);
@@ -234,11 +256,11 @@ public class SkewbPuzzle extends Puzzle {
         public Map<String, PuzzleState> getSuccessorsByName() {
             Map<String, PuzzleState> successors = new LinkedHashMap<>();
             String axes = "RULB";
-            for(int axis = 0; axis < axes.length(); axis++) {
+            for (int axis = 0; axis < axes.length(); axis++) {
                 char face = axes.charAt(axis);
-                for(int pow = 1; pow <= 2; pow++) {
+                for (int pow = 1; pow <= 2; pow++) {
                     String turn = "" + face;
-                    if(pow == 2) {
+                    if (pow == 2) {
                         turn += "'";
                     }
                     int[][] imageCopy = new int[image.length][image[0].length];

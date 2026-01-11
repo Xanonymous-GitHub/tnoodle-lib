@@ -7,25 +7,30 @@ public class SkewbSolver {
     private static final int N_MOVES = 4;
 
     private static final int[] fact = { 1, 1, 1, 3, 12, 60, 360 };//fact[x] = x!/2
-    private static char[][] permmv = new char[4320][4];
-    private static char[][] twstmv = new char[2187][4];
-    private static byte[] permprun = new byte[4320];
-    private static byte[] twstprun = new byte[2187];
-
-    private static final String[] move2str = { "R ", "R' ", "L ", "L' ", "D ",
-        "D' ", "B ", "B' " };
-
+    private static final String[] move2str = {
+        "R ", "R' ", "L ", "L' ", "D ",
+        "D' ", "B ", "B' "
+    };
     private static final int MAX_SOLUTION_LENGTH = 12;
-
-    public SkewbSolver() {}
-
     private static final byte[][] cornerpermmv = new byte[][] {
         { 6, 5, 10, 1 }, { 9, 7, 4, 2 }, { 3, 11, 8, 0 }, { 10, 1, 6, 5 },
         { 0, 8, 11, 3 }, { 7, 9, 2, 4 }, { 4, 2, 9, 7 }, { 11, 3, 0, 8 },
-        { 1, 10, 5, 6 }, { 8, 0, 3, 11 }, { 2, 4, 7, 9 }, { 5, 6, 1, 10 } };
+        { 1, 10, 5, 6 }, { 8, 0, 3, 11 }, { 2, 4, 7, 9 }, { 5, 6, 1, 10 }
+    };
+    private static final byte[] ori = new byte[] {
+        0, 1, 2, 0, 2, 1, 1, 2, 0,
+        2, 1, 0
+    };
+    private static final char[][] permmv = new char[4320][4];
+    private static final char[][] twstmv = new char[2187][4];
+    private static final byte[] permprun = new byte[4320];
+    private static final byte[] twstprun = new byte[2187];
 
-    private static final byte[] ori = new byte[] { 0, 1, 2, 0, 2, 1, 1, 2, 0,
-        2, 1, 0 };
+    static {
+        init();
+    }
+
+    public SkewbSolver() {}
 
     private static int getpermmv(int idx, int move) {
         int centerindex = idx / 12;
@@ -76,7 +81,7 @@ public class SkewbSolver {
             int v = centerperm[i] << 2;
             centerindex *= 6 - i;
             centerindex += (val >> v) & 0xf;
-            val -= 0x111110L << v;
+            val -= (int) (0x111110L << v);
         }
         return centerindex * 12 + cornerpermmv[cornerindex][move];
     }
@@ -130,9 +135,7 @@ public class SkewbSolver {
         }
         return idx;
     }
-    static {
-        init();
-    }
+
     private static void init() {
         for (int i = 0; i < 4320; i++) {
             permprun[i] = -1;
@@ -211,14 +214,6 @@ public class SkewbSolver {
         return -1;
     }
 
-    public static class SkewbSolverState {
-        public int perm;
-        public int twst;
-        public boolean isSolvable() {
-            return ori[perm % 12] == (twst + twst / 3 + twst / 9 + twst / 27) % 3;
-        }
-    }
-
     public SkewbSolverState randomState(Random r) {
         SkewbSolverState state = new SkewbSolverState();
         state.perm = r.nextInt(4320);
@@ -263,7 +258,7 @@ public class SkewbSolver {
             int axis = sol[i] >> 1;
             int pow = sol[i] & 1;
             if (axis == 2) {//step two.
-                for (int p=0; p<=pow; p++) {
+                for (int p = 0; p <= pow; p++) {
                     String temp = move2str[0];
                     move2str[0] = move2str[1];
                     move2str[1] = move2str[3];
@@ -274,6 +269,15 @@ public class SkewbSolver {
             sb.append(" ");
         }
         return sb.toString().trim();
+    }
+
+    public static class SkewbSolverState {
+        public int perm;
+        public int twst;
+
+        public boolean isSolvable() {
+            return ori[perm % 12] == (twst + twst / 3 + twst / 9 + twst / 27) % 3;
+        }
     }
 }
 

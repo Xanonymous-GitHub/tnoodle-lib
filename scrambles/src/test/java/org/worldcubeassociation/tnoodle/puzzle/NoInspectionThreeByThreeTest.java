@@ -1,14 +1,23 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class NoInspectionThreeByThreeTest {
     protected static final Map<String, String> OPPOSITE_FACES = new HashMap<>();
@@ -85,7 +94,8 @@ public class NoInspectionThreeByThreeTest {
         }
     }
 
-    public void testSolveIn(NoInspectionThreeByThreeCubePuzzle threeNi, String scramble, String axisRestriction) throws InvalidScrambleException, InvalidMoveException {
+    public void testSolveIn(NoInspectionThreeByThreeCubePuzzle threeNi, String scramble, String axisRestriction)
+        throws InvalidScrambleException, InvalidMoveException {
         // Search for a solution to a cube scrambled with scramble,
         // but require that that solution not start with restriction
         Puzzle.PuzzleState solved = threeNi.getSolvedState();
@@ -93,7 +103,7 @@ public class NoInspectionThreeByThreeTest {
         Puzzle.PuzzleState u = solved.apply(scramble);
         String solution = threeNi.solveIn(u, 20, axisRestriction, null);
 
-        System.out.println(String.format("Solution to %s (restriction %s): %s", scramble, axisRestriction, solution));
+        System.out.printf("Solution to %s (restriction %s): %s%n", scramble, axisRestriction, solution);
 
         // restriction defines an axis of turns that may not start a solution,
         // so we assert the solution starts with neither restriction, nor

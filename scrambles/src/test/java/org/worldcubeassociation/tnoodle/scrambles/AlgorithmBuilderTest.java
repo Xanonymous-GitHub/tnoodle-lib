@@ -1,13 +1,12 @@
 package org.worldcubeassociation.tnoodle.scrambles;
 
-import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
-
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
 
 public class AlgorithmBuilderTest {
     @Test

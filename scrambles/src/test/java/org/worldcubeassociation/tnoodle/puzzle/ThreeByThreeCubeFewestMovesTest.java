@@ -1,16 +1,25 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class ThreeByThreeCubeFewestMovesTest {
     protected static final Map<String, String> OPPOSITE_FACES = new HashMap<>();
@@ -85,14 +94,15 @@ public class ThreeByThreeCubeFewestMovesTest {
             String scramble = ab.getStateAndGenerator().generator;
             assertEquals(scramble.length(), uncancelledScramble.length());
 
-            System.out.println(String.format("%s move 333fm scramble: %s", scramble.split(" ").length, scramble));
+            System.out.printf("%s move 333fm scramble: %s%n", scramble.split(" ").length, scramble);
 
             assertTrue(scramble.startsWith("R' U' F"));
             assertTrue(scramble.endsWith("R' U' F"));
         }
     }
 
-    public void testSolveIn(ThreeByThreeCubeFewestMovesPuzzle threeFm, String scramble, String firstAxisRestriction, String lastAxisRestriction) throws InvalidScrambleException, InvalidMoveException {
+    public void testSolveIn(ThreeByThreeCubeFewestMovesPuzzle threeFm, String scramble, String firstAxisRestriction, String lastAxisRestriction)
+        throws InvalidScrambleException, InvalidMoveException {
         // Search for a solution to a cube scrambled with scramble,
         // but require that that solution not start or end with restriction.
         Puzzle.PuzzleState solved = threeFm.getSolvedState();
@@ -100,7 +110,13 @@ public class ThreeByThreeCubeFewestMovesTest {
         Puzzle.PuzzleState u = solved.apply(scramble);
         String solution = threeFm.solveIn(u, 20, firstAxisRestriction, lastAxisRestriction);
 
-        System.out.println(String.format("Solution to %s (solution may not start with %s axis and may not end with %s axis): %s", scramble, firstAxisRestriction, lastAxisRestriction, solution));
+        System.out.printf(
+            "Solution to %s (solution may not start with %s axis and may not end with %s axis): %s%n",
+            scramble,
+            firstAxisRestriction,
+            lastAxisRestriction,
+            solution
+        );
 
         Puzzle.PuzzleState shouldBeSolved = u.applyAlgorithm(solution);
         assertTrue(shouldBeSolved.isSolved());

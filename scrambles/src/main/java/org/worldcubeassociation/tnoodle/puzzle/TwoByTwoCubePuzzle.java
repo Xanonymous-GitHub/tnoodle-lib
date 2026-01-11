@@ -2,19 +2,20 @@ package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
 
+import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.puzzle.TwoByTwoSolver.TwoByTwoState;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder.MergingMode;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-import org.worldcubeassociation.tnoodle.puzzle.TwoByTwoSolver.TwoByTwoState;
-import org.timepedia.exporter.client.Export;
 
 @Export
 public class TwoByTwoCubePuzzle extends CubePuzzle {
     private static final int TWO_BY_TWO_MIN_SCRAMBLE_LENGTH = 11;
 
     private final TwoByTwoSolver twoSolver;
+
     public TwoByTwoCubePuzzle() {
         super(2);
         wcaMinScrambleDistance = 4;

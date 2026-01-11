@@ -1,12 +1,12 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import org.junit.jupiter.api.Test;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SquareOnePuzzleTest {
     @Test
@@ -14,30 +14,30 @@ public class SquareOnePuzzleTest {
         Puzzle sq1 = new SquareOnePuzzle();
         AlgorithmBuilder ab = new AlgorithmBuilder(sq1, AlgorithmBuilder.MergingMode.CANONICALIZE_MOVES);
 
-        assertEquals(ab.getTotalCost(), 0);
+        assertEquals(0, ab.getTotalCost());
 
         ab.appendMove("(1,0)");
-        assertEquals(ab.getTotalCost(), 1);
+        assertEquals(1, ab.getTotalCost());
 
         ab.appendMove("(2,0)");
-        assertEquals(ab.getTotalCost(), 1);
+        assertEquals(1, ab.getTotalCost());
 
         ab.appendMove("(0,-1)");
-        assertEquals(ab.getTotalCost(), 1);
+        assertEquals(1, ab.getTotalCost());
 
         ab.appendMove("/");
-        assertEquals(ab.getTotalCost(), 2);
+        assertEquals(2, ab.getTotalCost());
 
         ab.appendMove("/");
-        assertEquals(ab.getTotalCost(), 1);
+        assertEquals(1, ab.getTotalCost());
 
         Puzzle.PuzzleState state = ab.getState();
 
         String solution = state.solveIn(1);
-        assertEquals(solution, "(-3,1)");
+        assertEquals("(-3,1)", solution);
 
         solution = state.solveIn(2);
-        assertEquals(solution, "(-3,1)");
+        assertEquals("(-3,1)", solution);
     }
 
     @Test

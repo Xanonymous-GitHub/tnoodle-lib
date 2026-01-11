@@ -1,13 +1,40 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
-import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
-import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
-import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+
 import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
+import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
 
 @Export
 public class NoInspectionFourByFourCubePuzzle extends FourByFourCubePuzzle {
+    public static PuzzleStateAndGenerator applyOrientation(
+        CubePuzzle puzzle,
+        CubeMove[] randomOrientation,
+        PuzzleStateAndGenerator psag,
+        boolean discardRedundantMoves
+    ) {
+        if (randomOrientation.length == 0) {
+            // No reorientation required
+            return psag;
+        }
+
+        // Append reorientation to scramble.
+        try {
+            AlgorithmBuilder ab = new AlgorithmBuilder(puzzle, AlgorithmBuilder.MergingMode.NO_MERGING);
+            ab.appendAlgorithm(psag.generator);
+            for (CubeMove cm : randomOrientation) {
+                ab.appendMove(cm.toString());
+            }
+
+            psag = ab.getStateAndGenerator();
+            return psag;
+        } catch (InvalidMoveException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public NoInspectionFourByFourCubePuzzle() {
     }
 
@@ -18,27 +45,6 @@ public class NoInspectionFourByFourCubePuzzle extends FourByFourCubePuzzle {
         PuzzleStateAndGenerator psag = super.generateRandomMoves(r);
         psag = applyOrientation(this, randomOrientation, psag, true);
         return psag;
-    }
-
-    public static PuzzleStateAndGenerator applyOrientation(CubePuzzle puzzle, CubeMove[] randomOrientation, PuzzleStateAndGenerator psag, boolean discardRedundantMoves) {
-        if(randomOrientation.length == 0) {
-            // No reorientation required
-            return psag;
-        }
-
-        // Append reorientation to scramble.
-        try {
-            AlgorithmBuilder ab = new AlgorithmBuilder(puzzle, AlgorithmBuilder.MergingMode.NO_MERGING);
-            ab.appendAlgorithm(psag.generator);
-            for(CubeMove cm : randomOrientation) {
-                ab.appendMove(cm.toString());
-            }
-
-            psag = ab.getStateAndGenerator();
-            return psag;
-        } catch(InvalidMoveException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override

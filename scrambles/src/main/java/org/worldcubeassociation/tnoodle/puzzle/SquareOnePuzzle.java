@@ -1,23 +1,68 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import org.worldcubeassociation.tnoodle.scrambles.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Random;
+
+import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
+import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
+import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
 import org.worldcubeassociation.tnoodle.svglite.Color;
 import org.worldcubeassociation.tnoodle.svglite.Dimension;
-import org.worldcubeassociation.tnoodle.svglite.Svg;
-import org.worldcubeassociation.tnoodle.svglite.Transform;
 import org.worldcubeassociation.tnoodle.svglite.Path;
 import org.worldcubeassociation.tnoodle.svglite.Rectangle;
-
-import java.util.*;
+import org.worldcubeassociation.tnoodle.svglite.Svg;
+import org.worldcubeassociation.tnoodle.svglite.Transform;
 
 import cs.sq12phase.FullCube;
 import cs.sq12phase.Search;
-import org.timepedia.exporter.client.Export;
 
 @Export
 public class SquareOnePuzzle extends Puzzle {
 
     private static final int radius = 32;
+    private static final Map<String, Color> defaultColorScheme = new HashMap<>();
+    private static final double RADIUS_MULTIPLIER = Math.sqrt(2) * Math.cos(Math.toRadians(15));
+    private static final double multiplier = 1.4;
+    static Map<String, Integer> wcaCostsByMove = new HashMap<>();
+    static Map<String, Integer> slashabilityCostsByMove = new HashMap<>();
+
+    static {
+        defaultColorScheme.put("B", new Color(255, 128, 0)); //orange heraldic tincture
+        defaultColorScheme.put("D", Color.WHITE);
+        defaultColorScheme.put("F", Color.RED);
+        defaultColorScheme.put("L", Color.BLUE);
+        defaultColorScheme.put("R", Color.GREEN);
+        defaultColorScheme.put("U", Color.YELLOW);
+    }
+
+    static {
+        for (int top = -5; top <= 6; top++) {
+            for (int bottom = -5; bottom <= 6; bottom++) {
+                if (top == 0 && bottom == 0) {
+                    // No use doing nothing =)
+                    continue;
+                }
+                String turn = "(" + top + "," + bottom + ")";
+
+                int wcaCost = 1; // https://www.worldcubeassociation.org/regulations/#12c4
+                wcaCostsByMove.put(turn, wcaCost);
+
+                int topCost = Math.abs(top);
+                int bottomCost = Math.abs(bottom);
+                int topBottomCost = topCost + bottomCost;
+                slashabilityCostsByMove.put(turn, topBottomCost);
+            }
+        }
+        // https://www.worldcubeassociation.org/regulations/#12c4
+        wcaCostsByMove.put("/", 1);
+    }
 
     private final ThreadLocal<Search> twoPhaseSearcher;
 
@@ -25,6 +70,18 @@ public class SquareOnePuzzle extends Puzzle {
         wcaMinScrambleDistance = 11;
 
         twoPhaseSearcher = ThreadLocal.withInitial(Search::new);
+    }
+
+    private static Dimension getImageSize(int radius) {
+        return new Dimension(getWidth(radius), getHeight(radius));
+    }
+
+    private static int getWidth(int radius) {
+        return (int) (2 * RADIUS_MULTIPLIER * multiplier * radius);
+    }
+
+    private static int getHeight(int radius) {
+        return (int) (4 * RADIUS_MULTIPLIER * multiplier * radius);
     }
 
     @Override
@@ -41,15 +98,6 @@ public class SquareOnePuzzle extends Puzzle {
         return new PuzzleStateAndGenerator(state, scramble);
     }
 
-    private static final Map<String, Color> defaultColorScheme = new HashMap<>();
-    static {
-        defaultColorScheme.put("B", new Color(255, 128, 0)); //orange heraldic tincture
-        defaultColorScheme.put("D", Color.WHITE);
-        defaultColorScheme.put("F", Color.RED);
-        defaultColorScheme.put("L", Color.BLUE);
-        defaultColorScheme.put("R", Color.GREEN);
-        defaultColorScheme.put("U", Color.YELLOW);
-    }
     @Override
     public Map<String, Color> getDefaultColorScheme() {
         return new HashMap<>(defaultColorScheme);
@@ -59,41 +107,29 @@ public class SquareOnePuzzle extends Puzzle {
     public Dimension getPreferredSize() {
         return getImageSize(radius);
     }
-    private static Dimension getImageSize(int radius) {
-        return new Dimension(getWidth(radius), getHeight(radius));
-    }
-    private static final double RADIUS_MULTIPLIER = Math.sqrt(2) * Math.cos(Math.toRadians(15));
-    private static final double multiplier = 1.4;
-    private static int getWidth(int radius) {
-        return (int) (2 * RADIUS_MULTIPLIER * multiplier * radius);
-    }
-    private static int getHeight(int radius) {
-        return (int) (4 * RADIUS_MULTIPLIER * multiplier * radius);
-    }
 
     private void drawFace(Svg g, Transform transform, int[] face, double x, double y, int radius, Color[] colorScheme) {
-        for(int ch = 0; ch < 12; ch++) {
-            if(ch < 11 && face[ch] == face[ch+1]) {
+        for (int ch = 0; ch < 12; ch++) {
+            if (ch < 11 && face[ch] == face[ch + 1]) {
                 ch++;
             }
             drawPiece(g, transform, face[ch], x, y, radius, colorScheme);
         }
     }
 
-    private int drawPiece(Svg g, Transform transform, int piece, double x, double y, int radius, Color[] colorScheme) {
+    private void drawPiece(Svg g, Transform transform, int piece, double x, double y, int radius, Color[] colorScheme) {
         boolean corner = isCornerPiece(piece);
         int degree = 30 * (corner ? 2 : 1);
         Path[] p = corner ? getCornerPoly(x, y, radius) : getWedgePoly(x, y, radius);
 
         Color[] cls = getPieceColors(piece, colorScheme);
-        for(int ch = cls.length - 1; ch >= 0; ch--) {
+        for (int ch = cls.length - 1; ch >= 0; ch--) {
             p[ch].setFill(cls[ch]);
             p[ch].setStroke(Color.BLACK);
             p[ch].setTransform(transform);
             g.appendChild(p[ch]);
         }
         transform.rotate(Math.toRadians(degree), x, y);
-        return degree;
     }
 
     private boolean isCornerPiece(int piece) {
@@ -103,23 +139,23 @@ public class SquareOnePuzzle extends Puzzle {
     private Color[] getPieceColors(int piece, Color[] colorScheme) {
         boolean up = piece <= 7;
         Color top = up ? colorScheme[4] : colorScheme[5];
-        if(isCornerPiece(piece)) { //corner piece
-            if(!up) {
+        if (isCornerPiece(piece)) { //corner piece
+            if (!up) {
                 piece = 15 - piece;
             }
-            Color a = colorScheme[(piece/2+3) % 4];
-            Color b = colorScheme[piece/2];
-            if(!up) { //mirror for bottom
+            Color a = colorScheme[(piece / 2 + 3) % 4];
+            Color b = colorScheme[piece / 2];
+            if (!up) { //mirror for bottom
                 Color t = a;
                 a = b;
                 b = t;
             }
             return new Color[] { top, a, b }; //ordered counter-clockwise
         } else { //wedge piece
-            if(!up) {
+            if (!up) {
                 piece = 14 - piece;
             }
-            return new Color[] { top, colorScheme[piece/2] };
+            return new Color[] { top, colorScheme[piece / 2] };
         }
     }
 
@@ -140,14 +176,15 @@ public class SquareOnePuzzle extends Puzzle {
         side.lineTo(tempx, tempy);
         side.closePath();
         side.translate(x, y);
-        return new Path[]{ p, side };
+        return new Path[] { p, side };
     }
+
     private Path[] getCornerPoly(double x, double y, int radius) {
         Path p = new Path();
         p.moveTo(0, 0);
         p.lineTo(radius, 0);
-        double tempx = radius*(1 + Math.cos(Math.toRadians(75))/Math.sqrt(2));
-        double tempy = radius*Math.sin(Math.toRadians(75))/Math.sqrt(2);
+        double tempx = radius * (1 + Math.cos(Math.toRadians(75)) / Math.sqrt(2));
+        double tempy = radius * Math.sin(Math.toRadians(75)) / Math.sqrt(2);
         p.lineTo(tempx, tempy);
         double tempX = radius / 2.0;
         double tempY = Math.sqrt(3) * radius / 2.0;
@@ -170,7 +207,7 @@ public class SquareOnePuzzle extends Puzzle {
         side2.lineTo(multiplier * tempX, multiplier * tempY);
         side2.closePath();
         side2.translate(x, y);
-        return new Path[]{ p, side1, side2 };
+        return new Path[] { p, side1, side2 };
     }
 
     @Override
@@ -193,37 +230,13 @@ public class SquareOnePuzzle extends Puzzle {
         return 40;
     }
 
-    static Map<String, Integer> wcaCostsByMove = new HashMap<>();
-    static Map<String, Integer> slashabilityCostsByMove = new HashMap<>();
-    static {
-        for(int top = -5; top <= 6; top++) {
-            for(int bottom = -5; bottom <= 6; bottom++) {
-                if(top == 0 && bottom == 0) {
-                    // No use doing nothing =)
-                    continue;
-                }
-                String turn = "(" + top + "," + bottom + ")";
-
-                int wcaCost = 1; // https://www.worldcubeassociation.org/regulations/#12c4
-                wcaCostsByMove.put(turn, wcaCost);
-
-                int topCost = Math.abs(top);
-                int bottomCost = Math.abs(bottom);
-                int topBottomCost = topCost + bottomCost;
-                slashabilityCostsByMove.put(turn, topBottomCost);
-            }
-        }
-        // https://www.worldcubeassociation.org/regulations/#12c4
-        wcaCostsByMove.put("/", 1);
-    }
-
     public class SquareOneState extends PuzzleState {
         boolean sliceSolved;
         int[] pieces;
 
         public SquareOneState() {
             sliceSolved = true;
-            pieces = new int[]{ 0, 0, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 8, 9, 9, 10, 11, 11, 12, 13, 13, 14, 15, 15 }; //piece array
+            pieces = new int[] { 0, 0, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7, 8, 9, 9, 10, 11, 11, 12, 13, 13, 14, 15, 15 }; //piece array
         }
 
         public SquareOneState(boolean sliceSolved, int[] pieces) {
@@ -232,10 +245,10 @@ public class SquareOnePuzzle extends Puzzle {
         }
 
         FullCube toFullCube() {
-            int[] map1 = new int[]{3, 2, 1, 0, 7, 6, 5, 4, 0xa, 0xb, 8, 9, 0xe, 0xf, 0xc, 0xd};
-            int[] map2 = new int[]{5,4,3,2,1,0,11,10,9,8,7,6,17,16,15,14,13,12,23,22,21,20,19,18};
+            int[] map1 = new int[] { 3, 2, 1, 0, 7, 6, 5, 4, 0xa, 0xb, 8, 9, 0xe, 0xf, 0xc, 0xd };
+            int[] map2 = new int[] { 5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7, 6, 17, 16, 15, 14, 13, 12, 23, 22, 21, 20, 19, 18 };
             FullCube f = new FullCube();
-            for (int i=0; i<24; i++) {
+            for (int i = 0; i < 24; i++) {
                 f.setPiece(map2[i], map1[pieces[i]]);
             }
             f.setPiece(24, sliceSolved ? 0 : 1);
@@ -244,28 +257,25 @@ public class SquareOnePuzzle extends Puzzle {
 
         private int[] doSlash() {
             int[] newPieces = cloneArr(pieces);
-            for(int i = 0; i < 6; i++) {
-                int c = newPieces[i+12];
-                newPieces[i+12] = newPieces[i+6];
-                newPieces[i+6] = c;
+            for (int i = 0; i < 6; i++) {
+                int c = newPieces[i + 12];
+                newPieces[i + 12] = newPieces[i + 6];
+                newPieces[i + 6] = c;
             }
             return newPieces;
         }
 
         private boolean canSlash() {
-            if(pieces[0] == pieces[11]) {
+            if (pieces[0] == pieces[11]) {
                 return false;
             }
-            if(pieces[6] == pieces[5]) {
+            if (pieces[6] == pieces[5]) {
                 return false;
             }
-            if(pieces[12] == pieces[23]) {
+            if (pieces[12] == pieces[23]) {
                 return false;
             }
-            if(pieces[12+6] == pieces[(12+6)-1]) {
-                return false;
-            }
-            return true;
+            return pieces[12 + 6] != pieces[(12 + 6) - 1];
         }
 
         /**
@@ -279,15 +289,15 @@ public class SquareOnePuzzle extends Puzzle {
             int[] newPieces = cloneArr(pieces);
             int[] t = new int[12];
             System.arraycopy(newPieces, 0, t, 0, 12);
-            for(int i = 0; i < 12; i++) {
+            for (int i = 0; i < 12; i++) {
                 newPieces[i] = t[(top + i) % 12];
             }
 
             bottom = ((-bottom % 12) + 12) % 12;
 
             System.arraycopy(newPieces, 12, t, 0, 12);
-            for(int i = 0; i < 12; i++) {
-                newPieces[i+12] = t[(bottom + i) % 12];
+            for (int i = 0; i < 12; i++) {
+                newPieces[i + 12] = t[(bottom + i) % 12];
             }
 
             return newPieces;
@@ -307,10 +317,10 @@ public class SquareOnePuzzle extends Puzzle {
         public Map<String, SquareOneState> getScrambleSuccessors() {
             Map<String, SquareOneState> successors = getSuccessorsByName();
             Iterator<String> iter = successors.keySet().iterator();
-            while(iter.hasNext()) {
+            while (iter.hasNext()) {
                 String key = iter.next();
                 SquareOneState state = successors.get(key);
-                if(!state.canSlash()) {
+                if (!state.canSlash()) {
                     iter.remove();
                 }
             }
@@ -320,9 +330,9 @@ public class SquareOnePuzzle extends Puzzle {
         @Override
         public Map<String, SquareOneState> getSuccessorsByName() {
             Map<String, SquareOneState> successors = new LinkedHashMap<>();
-            for(int top = -5; top <= 6; top++) {
-                for(int bottom = -5; bottom <= 6; bottom++) {
-                    if(top == 0 && bottom == 0) {
+            for (int top = -5; top <= 6; top++) {
+                for (int bottom = -5; bottom <= 6; bottom++) {
+                    if (top == 0 && bottom == 0) {
                         // No use doing nothing =)
                         continue;
                     }
@@ -331,7 +341,7 @@ public class SquareOnePuzzle extends Puzzle {
                     successors.put(turn, new SquareOneState(sliceSolved, newPieces));
                 }
             }
-            if(canSlash()) {
+            if (canSlash()) {
                 successors.put("/", new SquareOneState(!sliceSolved, doSlash()));
             }
             return successors;
@@ -380,7 +390,8 @@ public class SquareOnePuzzle extends Puzzle {
             return scramble == null ? null : scramble.trim();
         }
 
-        private String solveWithSlashabilityIn(int n, String slashabilityMove, SquareOneState preSlashabilityState, int lowerThreshold) throws InvalidMoveException {
+        private String solveWithSlashabilityIn(int n, String slashabilityMove, SquareOneState preSlashabilityState, int lowerThreshold)
+            throws InvalidMoveException {
             if (!this.canSlash()) {
                 // nice try.
                 return null;
@@ -433,8 +444,8 @@ public class SquareOnePuzzle extends Puzzle {
 
             String faces = "LBRFUD";
             Color[] colorScheme = new Color[faces.length()];
-            for(int i = 0; i < colorScheme.length; i++) {
-                colorScheme[i] = colorSchemeMap.get(faces.charAt(i)+"");
+            for (int i = 0; i < colorScheme.length; i++) {
+                colorScheme[i] = colorSchemeMap.get(faces.charAt(i) + "");
             }
             Dimension dim = getImageSize(radius);
             int width = dim.width;
@@ -443,14 +454,29 @@ public class SquareOnePuzzle extends Puzzle {
             double half_square_width = (radius * RADIUS_MULTIPLIER * multiplier) / Math.sqrt(2);
             double edge_width = 2 * radius * multiplier * Math.sin(Math.toRadians(15));
             double corner_width = half_square_width - edge_width / 2.;
-            Rectangle left_mid = new Rectangle(width / 2. - half_square_width, height / 2. - radius * (multiplier - 1) / 2., corner_width, radius * (multiplier - 1));
+            Rectangle left_mid = new Rectangle(
+                width / 2. - half_square_width,
+                height / 2. - radius * (multiplier - 1) / 2.,
+                corner_width,
+                radius * (multiplier - 1)
+            );
             left_mid.setFill(colorScheme[3]); //front
             Rectangle right_mid;
-            if(sliceSolved) {
-                right_mid = new Rectangle(width / 2. - half_square_width, height / 2. - radius * (multiplier - 1) / 2., 2*corner_width + edge_width, radius * (multiplier - 1));
+            if (sliceSolved) {
+                right_mid = new Rectangle(
+                    width / 2. - half_square_width,
+                    height / 2. - radius * (multiplier - 1) / 2.,
+                    2 * corner_width + edge_width,
+                    radius * (multiplier - 1)
+                );
                 right_mid.setFill(colorScheme[3]); //front
             } else {
-                right_mid = new Rectangle(width / 2. - half_square_width, height / 2. - radius * (multiplier - 1) / 2., corner_width + edge_width, radius * (multiplier - 1));
+                right_mid = new Rectangle(
+                    width / 2. - half_square_width,
+                    height / 2. - radius * (multiplier - 1) / 2.,
+                    corner_width + edge_width,
+                    radius * (multiplier - 1)
+                );
                 right_mid.setFill(colorScheme[1]); //back
             }
             g.appendChild(right_mid);
@@ -469,13 +495,11 @@ public class SquareOnePuzzle extends Puzzle {
             Transform transform;
             double x = width / 2.0;
             double y = height / 4.0;
-            transform = Transform.getRotateInstance(
-                    Math.toRadians(90 + 15), x, y);
+            transform = Transform.getRotateInstance(Math.toRadians(90 + 15), x, y);
             drawFace(g, transform, pieces, x, y, radius, colorScheme);
 
             y *= 3.0;
-            transform = Transform.getRotateInstance(
-                    Math.toRadians(-90 - 15), x, y);
+            transform = Transform.getRotateInstance(Math.toRadians(-90 - 15), x, y);
             drawFace(g, transform, copyOfRange(pieces, 12, pieces.length), x, y, radius, colorScheme);
 
             return g;

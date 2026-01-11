@@ -1,13 +1,12 @@
 package org.worldcubeassociation.tnoodle.scrambleanalysis;
 
-import org.junit.jupiter.api.Test;
-import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+
+import org.junit.jupiter.api.Test;
+import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
 
 public class CubeTestTest {
     private final CubePuzzle randomMoveThreeByThree = new CubePuzzle(3);

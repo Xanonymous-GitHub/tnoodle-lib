@@ -1,10 +1,11 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
-import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
-import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
-import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
+
 import org.timepedia.exporter.client.Export;
+import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
+import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
+import org.worldcubeassociation.tnoodle.scrambles.PuzzleStateAndGenerator;
 
 @Export
 public class ThreeByThreeCubeFewestMovesPuzzle extends ThreeByThreeCubePuzzle {
@@ -89,7 +90,7 @@ public class ThreeByThreeCubeFewestMovesPuzzle extends ThreeByThreeCubePuzzle {
             ab.appendAlgorithms(scramblePrefix);
             ab.appendAlgorithm(psag.generator);
             ab.appendAlgorithms(scrambleSuffix);
-        } catch(InvalidMoveException e) {
+        } catch (InvalidMoveException e) {
             throw new RuntimeException(e);
         }
         return ab.getStateAndGenerator();

@@ -2,6 +2,16 @@ package cs.sq12phase;
 
 public class SearchTest {
 
+    static void main(String[] args) {
+        long t = System.nanoTime();
+
+        new Search().solution(new FullCube(""));
+        System.out.println((System.nanoTime() - t) / 1e9 + " seconds to initialize");
+
+        RandomSolvingTest();
+        OptimalSolverTest();
+    }
+
     static void OptimalSolverTest() {
         long t = System.nanoTime();
         Search s = new Search();
@@ -36,9 +46,10 @@ public class SearchTest {
             System.out.println("Scramble: " + s.move2string(scrambleLength));
             String sol = s.solutionOpt(fc, targetLength);
             System.out.println("Solution: " + sol);
-            System.out.println(
-                String.format("%.2fms\n",
-                              (System.nanoTime() - t) / 1000000.0 / (x + 1)));
+            System.out.printf(
+                "%.2fms\n%n",
+                (System.nanoTime() - t) / 1000000.0 / (x + 1)
+            );
         }
     }
 
@@ -49,19 +60,10 @@ public class SearchTest {
         for (int x = 0; x < 1000; x++) {
             String sol = s.solution(FullCube.randomCube(gen), Search.INVERSE_SOLUTION);
             System.out.println(sol);
-            System.out.println(
-                String.format("%.2fms",
-                              (System.nanoTime() - t) / 1000000.0 / (x + 1)));
+            System.out.printf(
+                "%.2fms%n",
+                (System.nanoTime() - t) / 1000000.0 / (x + 1)
+            );
         }
-    }
-
-    public static void main(String[] args) {
-        long t = System.nanoTime();
-
-        new Search().solution(new FullCube(""));
-        System.out.println((System.nanoTime() - t) / 1e9 + " seconds to initialize");
-
-        RandomSolvingTest();
-        OptimalSolverTest();
     }
 }

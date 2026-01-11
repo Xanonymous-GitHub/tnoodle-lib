@@ -24,7 +24,7 @@ public class CubeTest {
     private static final int corners = 8;
 
     public static boolean testScrambles(List<CubePuzzle.CubeState> scrambles)
-        throws RepresentationException {
+    throws RepresentationException {
 
         int N = scrambles.size();
 
