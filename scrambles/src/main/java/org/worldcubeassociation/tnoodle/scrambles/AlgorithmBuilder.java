@@ -136,7 +136,8 @@ public class AlgorithmBuilder {
             }
         } else {
             oldCostMove = 0;
-            newCostMove = states.getLast().getMoveCost(indexAndMove.move);
+            //noinspection SequencedCollectionMethodCanBeUsed (compatible to j2objc default jre emulation)
+            newCostMove = states.get(states.size() - 1).getMoveCost(indexAndMove.move);
             // This move is not redundant.
             moves.add(indexAndMove.move);
             // The code to update the states array is right below us,
@@ -186,7 +187,8 @@ public class AlgorithmBuilder {
 
     public PuzzleState getState() {
         assert states.size() == moves.size() + 1;
-        return states.getLast();
+        //noinspection SequencedCollectionMethodCanBeUsed (compatible to j2objc default jre emulation)
+        return states.get(states.size() - 1);
     }
 
     public int getTotalCost() {

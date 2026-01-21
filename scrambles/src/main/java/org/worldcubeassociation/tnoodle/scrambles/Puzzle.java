@@ -301,7 +301,8 @@ public abstract class Puzzle implements Exportable {
         Group g = new Group();
         List<Element> children = svg.getChildren();
         while (!children.isEmpty()) {
-            g.appendChild(children.removeFirst());
+            //noinspection SequencedCollectionMethodCanBeUsed (compatible to j2objc default jre emulation)
+            g.appendChild(children.remove(0));
         }
         g.translate(0.5, 0.5);
         svg.appendChild(g);
