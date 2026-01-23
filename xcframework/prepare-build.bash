@@ -4,6 +4,12 @@ set -euo pipefail
 
 : "${J2OBJC_HOME:?Please export J2OBJC_HOME=/path/to/j2objc/dist}"
 
+# J2ObjC's public distribution historically supports JDK 8/11. Ensure a compatible JAVA_HOME.
+# (The j2objc launcher script itself enforces this on many versions.)
+if [[ -n "${JAVA_HOME:-}" ]]; then
+  echo "JAVA_HOME=$JAVA_HOME"
+fi
+
 ./gradlew -q showClassPath > build/apple-classpath.txt
 
 # For iOS/macOS native build we intentionally do NOT translate third-party libs
@@ -33,6 +39,12 @@ for m in scrambles svglite threephase min2phase sq12phase; do
   mkdir -p "$WORKSRC/$m/src/main/java"
   rsync -a "$m/src/main/java/" "$WORKSRC/$m/src/main/java/"
 done
+
+# Some repos keep shared Java sources at the root module.
+if [[ -d "src/main/java" ]]; then
+  mkdir -p "$WORKSRC/root/src/main/java"
+  rsync -a "src/main/java/" "$WORKSRC/root/src/main/java/"
+fi
 
 # Strip imports and annotations that are only meaningful for GWT JS export.
 # This keeps the Java semantics for native usage while avoiding pulling GWT libraries.
