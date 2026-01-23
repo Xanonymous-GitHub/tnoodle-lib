@@ -1,6 +1,6 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import java.util.Random;
+import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
@@ -14,7 +14,7 @@ public class ThreeByThreeCubeFewestMovesPuzzle extends ThreeByThreeCubePuzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
         // For fewest moves, we want to minimize the probability that the
         // scramble has useful "stuff" in it. The problem with conventional
         // Kociemba 2 phase solutions is that there's a pretty obvious

@@ -37,6 +37,7 @@ import static cs.threephase.Util.tostr;
 import java.util.Arrays;
 import java.util.PriorityQueue;
 import java.util.Random;
+import java.util.random.RandomGenerator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,9 +47,9 @@ public class Search {
     static final int PHASE2_ATTEMPTS = 500;
     static final int PHASE2_SOLUTIONS = 100;
     static final int PHASE3_ATTEMPTS = 100;
+    private static final Logger logger = LoggerFactory.getLogger(Search.class);
     static boolean inited = false;
     static int[] count = new int[1];
-    private static final Logger logger = LoggerFactory.getLogger(Search.class);
 
     public synchronized static void init() {
         if (inited) {
@@ -83,6 +84,7 @@ public class Search {
 
         inited = true;
     }
+
     public FullCube c;
     public boolean inverse_solution = true;
     public boolean with_rotation = false;
@@ -128,7 +130,7 @@ public class Search {
         return solve(moveseq);
     }
 
-    public String randomState(Random r) {
+    public String randomState(RandomGenerator r) {
         c = new FullCube(r);
         doSearch();
         return solution;

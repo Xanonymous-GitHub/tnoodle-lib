@@ -34,11 +34,12 @@ import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
 import org.worldcubeassociation.tnoodle.scrambles.ScrambleCacher;
 import org.worldcubeassociation.tnoodle.scrambles.ScrambleCacherListener;
+import org.worldcubeassociation.tnoodle.scrambles.SeededRng;
 
 public class HugeScrambleTest {
     private static final Logger l = Logger.getLogger(HugeScrambleTest.class.getName());
 
-    private static final Random r = Puzzle.getSecureRandom();
+    private static final Random r = SeededRng.createWithoutSeed();
 
     @Test
     public void testScrambleFiltering() throws InvalidScrambleException, IOException {

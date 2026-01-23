@@ -1,6 +1,7 @@
 package cs.sq12phase;
 
 import java.util.Random;
+import java.util.random.RandomGenerator;
 
 public class FullCube implements Comparable<FullCube> {
 
@@ -14,7 +15,7 @@ public class FullCube implements Comparable<FullCube> {
         return randomCube(r);
     }
 
-    public static FullCube randomCube(Random r) {
+    public static FullCube randomCube(RandomGenerator r) {
         int shape = Shape.ShapeIdx[r.nextInt(3678)];
         FullCube f = new FullCube();
         int corner = 0x01234567 << 1 | 0x11111111;
@@ -41,6 +42,7 @@ public class FullCube implements Comparable<FullCube> {
         f.ml = r.nextInt(2);
         return f;
     }
+
     int ul = 0x011233;
     int ur = 0x455677;
     int dl = 0x998bba;

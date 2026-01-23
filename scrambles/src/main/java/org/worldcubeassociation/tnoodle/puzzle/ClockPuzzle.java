@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.logging.Logger;
+import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
@@ -99,7 +99,7 @@ public class ClockPuzzle extends Puzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
         StringBuilder scramble = new StringBuilder();
 
         for (int x = 0; x < 9; x++) {

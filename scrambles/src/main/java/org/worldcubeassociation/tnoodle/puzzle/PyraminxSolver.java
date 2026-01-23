@@ -2,6 +2,7 @@ package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.random.RandomGenerator;
 
 public class PyraminxSolver {
     /** There are 4 corners on the pyraminx that are in a fixed position.
@@ -74,15 +75,15 @@ public class PyraminxSolver {
 
     static final int[] fact = { 1, 1, 2, 6, 24, 120, 720 }; // fact[x] = x!
     /**
+     * Fill the pruning tables for the permutation and orientation coordinates.
+     */
+    private static final int[] prunPerm = new int[N_EDGE_PERM];
+    /**
      * Fill the arrays to move permutation and orientation coordinates.
      */
     public static int[][] moveEdgePerm = new int[N_EDGE_PERM][N_MOVES];
     public static int[][] moveEdgeOrient = new int[N_EDGE_ORIENT][N_MOVES];
     public static int[][] moveCornerOrient = new int[N_CORNER_ORIENT][N_MOVES];
-    /**
-     * Fill the pruning tables for the permutation and orientation coordinates.
-     */
-    private static final int[] prunPerm = new int[N_EDGE_PERM];
 
     static {
         initMoves();
@@ -378,7 +379,7 @@ public class PyraminxSolver {
      * @param r         random int generator
      * @return          A randomised Pyraminx state, based on the seeding of {@code r}
      */
-    public PyraminxSolverState randomState(Random r) {
+    public PyraminxSolverState randomState(RandomGenerator r) {
         PyraminxSolverState state = new PyraminxSolverState();
         do {
             state.edgePerm = r.nextInt(N_EDGE_PERM);

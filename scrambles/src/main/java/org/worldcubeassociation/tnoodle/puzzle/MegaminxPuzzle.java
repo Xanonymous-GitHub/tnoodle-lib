@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
@@ -286,7 +286,7 @@ public class MegaminxPuzzle extends Puzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
         StringBuilder scramble = new StringBuilder();
 
         int width = 10, height = 7;

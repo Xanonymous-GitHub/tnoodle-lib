@@ -32,7 +32,7 @@ import static cs.threephase.Moves.U6;
 import static cs.threephase.Moves.U8;
 import static cs.threephase.Util.swap;
 
-import java.util.Random;
+import java.util.random.RandomGenerator;
 
 class EdgeCube {
 
@@ -58,7 +58,7 @@ class EdgeCube {
         copy(c);
     }
 
-    EdgeCube(Random r) {
+    EdgeCube(RandomGenerator r) {
         this();
         for (int i = 0; i < 23; i++) {
             int t = i + r.nextInt(24 - i);

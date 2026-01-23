@@ -179,6 +179,7 @@ import static cs.threephase.Moves.uf;
 
 import java.util.Comparator;
 import java.util.Random;
+import java.util.random.RandomGenerator;
 
 public class FullCube implements Comparable<FullCube> {
 
@@ -276,7 +277,7 @@ public class FullCube implements Comparable<FullCube> {
         copy(c);
     }
 
-    public FullCube(Random r) {
+    public FullCube(RandomGenerator r) {
         edge = new EdgeCube(r);
         center = new CenterCube(r);
         corner = new CornerCube(r);

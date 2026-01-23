@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidMoveException;
 import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
+import org.worldcubeassociation.tnoodle.scrambles.SeededRng;
 
 public class NoInspectionThreeByThreeTest {
     protected static final Map<String, String> OPPOSITE_FACES = new HashMap<>();
@@ -87,7 +88,7 @@ public class NoInspectionThreeByThreeTest {
 
         assertTrue(scrambled.applyAlgorithm(solution).isSolved());
 
-        Random r = Puzzle.getSecureRandom();
+        Random r = SeededRng.createWithoutSeed();
 
         for (int i = 0; i < 10; i++) {
             System.out.println(threes.generateWcaScramble(r));

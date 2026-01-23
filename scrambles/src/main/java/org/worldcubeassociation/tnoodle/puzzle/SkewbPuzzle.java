@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.logging.Logger;
+import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.puzzle.SkewbSolver.SkewbSolverState;
@@ -48,7 +48,7 @@ public class SkewbPuzzle extends Puzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
+    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
         SkewbSolverState state = skewbSolver.randomState(r);
         String scramble = skewbSolver.generateExactly(state, MIN_SCRAMBLE_LENGTH, r);
         assert scramble.split(" ").length == MIN_SCRAMBLE_LENGTH;
@@ -88,8 +88,8 @@ public class SkewbPuzzle extends Puzzle {
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(
-                (int) Math.ceil((3 * gap + 8 * pieceSize + 1) * sq3d2),
-                (int) (double) (2 * gap + 6 * pieceSize + 1)
+            (int) Math.ceil((3 * gap + 8 * pieceSize + 1) * sq3d2),
+            (int) (double) (2 * gap + 6 * pieceSize + 1)
         );
     }
 
