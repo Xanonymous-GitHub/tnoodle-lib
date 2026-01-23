@@ -25,7 +25,7 @@ import static cs.threephase.Moves.U3;
 import static cs.threephase.Moves.U7;
 import static cs.threephase.Moves.U9;
 
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 class CornerCube {
 
@@ -53,7 +53,7 @@ class CornerCube {
     CornerCube() {
     }
 
-    CornerCube(RandomGenerator r) {
+    CornerCube(Random r) {
         this(r.nextInt(40320), r.nextInt(2187));
     }
 

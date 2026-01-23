@@ -2,6 +2,8 @@ package org.worldcubeassociation.tnoodle.scrambles;
 
 import static java.lang.Math.ceil;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,12 +11,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.random.RandomGenerator;
-import java.util.random.RandomGeneratorFactory;
 
 import org.timepedia.exporter.client.Export;
 import org.timepedia.exporter.client.ExportClosure;
@@ -43,7 +44,20 @@ import org.worldcubeassociation.tnoodle.svglite.Svg;
 @ExportClosure
 public abstract class Puzzle implements Exportable {
     private static final Logger l = Logger.getLogger(Puzzle.class.getName());
-    private static final SecureRandom RND = new SecureRandom();
+
+    public static SecureRandom getSecureRandom() {
+        try {
+            try {
+                return SecureRandom.getInstance("SHA1PRNG", "SUN");
+            } catch (NoSuchProviderException e) {
+                l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
+                return SecureRandom.getInstance("SHA1PRNG");
+            }
+        } catch (NoSuchAlgorithmException e) {
+            l.log(Level.SEVERE, "Couldn't get SecureRandomInstance", e);
+            throw new RuntimeException(e);
+        }
+    }
 
     public static int[] cloneArr(int[] src) {
         int[] dest = new int[src.length];
@@ -63,7 +77,7 @@ public abstract class Puzzle implements Exportable {
         }
     }
 
-    public static <H> H choose(RandomGenerator r, Iterable<H> keySet) {
+    public static <H> H choose(Random r, Iterable<H> keySet) {
         H chosen = null;
         int count = 0;
         for (H element : keySet) {
@@ -80,7 +94,7 @@ public abstract class Puzzle implements Exportable {
         System.arraycopy(src, from, dest, 0, dest.length);
         return dest;
     }
-
+    private final SecureRandom r = getSecureRandom();
     protected int wcaMinScrambleDistance = 2;
 
     /**
@@ -130,7 +144,7 @@ public abstract class Puzzle implements Exportable {
      * @param r The instance of Random you must use as your source of randomness when generating scrambles.
      * @return A String containing the scramble, where turns are assumed to be separated by whitespace.
      */
-    public final String generateWcaScramble(RandomGenerator r) {
+    public final String generateWcaScramble(Random r) {
         PuzzleStateAndGenerator psag;
         do {
             psag = generateRandomMoves(r);
@@ -143,7 +157,7 @@ public abstract class Puzzle implements Exportable {
      */
     public abstract Map<String, Color> getDefaultColorScheme();
 
-    private String[] generateScrambles(RandomGenerator r, int count) {
+    private String[] generateScrambles(Random r, int count) {
         String[] scrambles = new String[count];
         for (int i = 0; i < count; i++) {
             scrambles[i] = generateWcaScramble(r);
@@ -153,12 +167,12 @@ public abstract class Puzzle implements Exportable {
 
     @Export
     public final String generateScramble() {
-        return generateWcaScramble(RND);
+        return generateWcaScramble(r);
     }
 
     @Export
     public final String[] generateScrambles(int count) {
-        return generateScrambles(RND, count);
+        return generateScrambles(r, count);
     }
 
     /**
@@ -178,18 +192,26 @@ public abstract class Puzzle implements Exportable {
     }
 
     private String generateSeededScramble(byte[] seed) {
-        final var r = createRandom(seed);
+        // We must create our own Random because
+        // other threads can access the static one.
+        // Also, setSeed supplements an existing seed,
+        // rather than replacing it.
+        // TODO - consider using something other than SecureRandom for seeded scrambles,
+        // because we really, really want this to be portable across platforms (desktop java, gwt, and android)
+        // https://github.com/thewca/tnoodle/issues/146
+        SecureRandom r = getSecureRandom();
+        r.setSeed(seed);
         return generateWcaScramble(r);
     }
 
     private String[] generateSeededScrambles(byte[] seed, int count) {
-        final var r = createRandom(seed);
+        // We must create our own Random because
+        // other threads can access the static one.
+        // Also, setSeed supplements an existing seed,
+        // rather than replacing it.
+        SecureRandom r = getSecureRandom();
+        r.setSeed(seed);
         return generateScrambles(r, count);
-    }
-
-    private RandomGenerator createRandom(byte[] seed) {
-        final var r = RandomGeneratorFactory.of("SecureRandom");
-        return r.create(seed);
     }
 
     /**
@@ -548,7 +570,7 @@ public abstract class Puzzle implements Exportable {
      *         state achieved by applying that scramble.
      */
     @NoExport
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.NO_MERGING);
         while (ab.getTotalCost() < getRandomMoveCount()) {
             Map<String, ? extends PuzzleState> successors = ab.getState().getScrambleSuccessors();

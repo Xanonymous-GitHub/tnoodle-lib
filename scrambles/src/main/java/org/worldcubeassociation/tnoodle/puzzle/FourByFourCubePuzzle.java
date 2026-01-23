@@ -1,6 +1,6 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
@@ -26,7 +26,7 @@ public class FourByFourCubePuzzle extends CubePuzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         String scramble = threePhaseSearcher.get().randomState(r);
         AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.CANONICALIZE_MOVES);
         try {

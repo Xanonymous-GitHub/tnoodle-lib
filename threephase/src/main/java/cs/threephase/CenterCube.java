@@ -2,7 +2,7 @@ package cs.threephase;
 
 import static cs.threephase.Util.swap;
 
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 class CenterCube {
 
@@ -19,7 +19,7 @@ class CenterCube {
         copy(c);
     }
 
-    CenterCube(RandomGenerator r) {
+    CenterCube(Random r) {
         this();
         for (int i = 0; i < 23; i++) {
             int t = i + r.nextInt(24 - i);

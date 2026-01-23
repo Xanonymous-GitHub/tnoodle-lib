@@ -1,6 +1,6 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
@@ -51,7 +51,7 @@ public class NoInspectionFiveByFiveCubePuzzle extends CubePuzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         CubeMove[][] randomOrientationMoves = getRandomOrientationMoves(size / 2);
         CubeMove[] randomOrientation = randomOrientationMoves[r.nextInt(randomOrientationMoves.length)];
         PuzzleStateAndGenerator psag = super.generateRandomMoves(r);

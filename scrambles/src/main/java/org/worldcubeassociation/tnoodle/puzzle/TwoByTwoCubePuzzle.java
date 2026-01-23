@@ -1,6 +1,6 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.puzzle.TwoByTwoSolver.TwoByTwoState;
@@ -23,7 +23,7 @@ public class TwoByTwoCubePuzzle extends CubePuzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         TwoByTwoState state = twoSolver.randomState(r);
         String scramble = twoSolver.generateExactly(state, TWO_BY_TWO_MIN_SCRAMBLE_LENGTH);
         assert scramble.split(" ").length == TWO_BY_TWO_MIN_SCRAMBLE_LENGTH;

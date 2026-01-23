@@ -1,7 +1,6 @@
 package cs.min2phase;
 
 import java.util.Random;
-import java.util.random.RandomGenerator;
 
 /**
  * Some useful functions.
@@ -34,7 +33,7 @@ public class Tools {
         return randomState(STATE_RANDOM, STATE_RANDOM, STATE_RANDOM, STATE_RANDOM, gen);
     }
 
-    public static String randomCube(RandomGenerator gen) {
+    public static String randomCube(Random gen) {
         return randomState(STATE_RANDOM, STATE_RANDOM, STATE_RANDOM, STATE_RANDOM, gen);
     }
 
@@ -286,7 +285,7 @@ public class Tools {
         return idx;
     }
 
-    protected static String randomState(byte[] cp, byte[] co, byte[] ep, byte[] eo, RandomGenerator gen) {
+    protected static String randomState(byte[] cp, byte[] co, byte[] ep, byte[] eo, Random gen) {
         int parity;
         int cntUE = ep == STATE_RANDOM ? 12 : countUnknown(ep);
         int cntUC = cp == STATE_RANDOM ? 8 : countUnknown(cp);

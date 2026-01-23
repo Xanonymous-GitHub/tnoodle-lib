@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -12,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -83,7 +83,7 @@ public class ThreeByThreeCubeFewestMovesTest {
         assertFalse(firstMove.startsWith("L"));
         assertFalse(lastMove.startsWith("L"));
 
-        final var r = new SecureRandom();
+        Random r = Puzzle.getSecureRandom();
 
         for (int i = 0; i < 10; i++) {
             String uncancelledScramble = threeFm.generateWcaScramble(r);

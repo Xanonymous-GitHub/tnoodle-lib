@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.logging.Logger;
-import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.puzzle.PyraminxSolver.PyraminxSolverState;
@@ -116,7 +116,7 @@ public class PyraminxPuzzle extends Puzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         PyraminxSolverState state = pyraminxSolver.randomState(r);
         String scramble = pyraminxSolver.generateExactly(state, MIN_SCRAMBLE_LENGTH, false);
         assert scramble.split(" ").length == MIN_SCRAMBLE_LENGTH + state.unsolvedTips();

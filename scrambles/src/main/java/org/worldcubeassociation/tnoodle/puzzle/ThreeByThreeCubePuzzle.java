@@ -1,7 +1,7 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
+import java.util.Random;
 import java.util.logging.Logger;
-import java.util.random.RandomGenerator;
 
 import org.timepedia.exporter.client.Export;
 import org.worldcubeassociation.tnoodle.scrambles.AlgorithmBuilder;
@@ -57,7 +57,7 @@ public class ThreeByThreeCubePuzzle extends CubePuzzle {
         return solution;
     }
 
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r, String firstAxisRestriction, String lastAxisRestriction) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r, String firstAxisRestriction, String lastAxisRestriction) {
         String randomState = Tools.randomCube(r);
         String scramble = twoPhaseSearcher.get().solution(
             randomState,
@@ -79,7 +79,7 @@ public class ThreeByThreeCubePuzzle extends CubePuzzle {
     }
 
     @Override
-    public PuzzleStateAndGenerator generateRandomMoves(RandomGenerator r) {
+    public PuzzleStateAndGenerator generateRandomMoves(Random r) {
         return generateRandomMoves(r, null, null);
     }
 }

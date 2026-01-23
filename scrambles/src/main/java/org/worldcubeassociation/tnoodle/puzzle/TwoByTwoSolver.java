@@ -1,7 +1,7 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Arrays;
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 public class TwoByTwoSolver {
     /***
@@ -314,7 +314,7 @@ public class TwoByTwoSolver {
      * Generate a random 2x2 position.
      * @param r         random int generator
      */
-    public TwoByTwoState randomState(RandomGenerator r) {
+    public TwoByTwoState randomState(Random r) {
         TwoByTwoState state = new TwoByTwoState();
         state.permutation = r.nextInt(N_PERM);
         state.orientation = r.nextInt(N_ORIENT);

@@ -1,7 +1,6 @@
 package org.worldcubeassociation.tnoodle.puzzle;
 
 import java.util.Random;
-import java.util.random.RandomGenerator;
 
 public class SkewbSolver {
 
@@ -184,7 +183,7 @@ public class SkewbSolver {
         }
     }
 
-    protected int search(int depth, int perm, int twst, int maxl, int lm, int[] sol, RandomGenerator randomizeMoves) {
+    protected int search(int depth, int perm, int twst, int maxl, int lm, int[] sol, Random randomizeMoves) {
         if (maxl == 0) {
             if (perm == 0 && twst == 0) {
                 return depth;
@@ -215,7 +214,7 @@ public class SkewbSolver {
         return -1;
     }
 
-    public SkewbSolverState randomState(RandomGenerator r) {
+    public SkewbSolverState randomState(Random r) {
         SkewbSolverState state = new SkewbSolverState();
         state.perm = r.nextInt(4320);
         do {
@@ -234,7 +233,7 @@ public class SkewbSolver {
         }
     }
 
-    public String generateExactly(SkewbSolverState state, int length, RandomGenerator randomizeMoves) {
+    public String generateExactly(SkewbSolverState state, int length, Random randomizeMoves) {
         int[] sol = new int[MAX_SOLUTION_LENGTH];
         int solutionLength = search(0, state.perm, state.twst, length, -1, sol, randomizeMoves);
         if (solutionLength != -1) {
