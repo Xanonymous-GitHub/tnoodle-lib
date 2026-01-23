@@ -1,0 +1,4 @@
+framework module TNoodle {
+  umbrella header "TNoodle.h"
+  export *
+}
