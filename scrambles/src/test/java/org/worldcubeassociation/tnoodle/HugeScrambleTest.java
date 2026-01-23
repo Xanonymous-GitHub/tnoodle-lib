@@ -9,9 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 import java.util.logging.Logger;
 
 import org.junit.jupiter.api.Test;
@@ -34,12 +34,11 @@ import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
 import org.worldcubeassociation.tnoodle.scrambles.ScrambleCacher;
 import org.worldcubeassociation.tnoodle.scrambles.ScrambleCacherListener;
-import org.worldcubeassociation.tnoodle.scrambles.SeededRng;
 
 public class HugeScrambleTest {
     private static final Logger l = Logger.getLogger(HugeScrambleTest.class.getName());
 
-    private static final Random r = SeededRng.createWithoutSeed();
+    private static final SecureRandom r = new SecureRandom();
 
     @Test
     public void testScrambleFiltering() throws InvalidScrambleException, IOException {

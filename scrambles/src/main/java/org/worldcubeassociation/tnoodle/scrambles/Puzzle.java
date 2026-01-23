@@ -2,6 +2,7 @@ package org.worldcubeassociation.tnoodle.scrambles;
 
 import static java.lang.Math.ceil;
 
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -13,6 +14,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.random.RandomGenerator;
+import java.util.random.RandomGeneratorFactory;
 
 import org.timepedia.exporter.client.Export;
 import org.timepedia.exporter.client.ExportClosure;
@@ -41,6 +43,7 @@ import org.worldcubeassociation.tnoodle.svglite.Svg;
 @ExportClosure
 public abstract class Puzzle implements Exportable {
     private static final Logger l = Logger.getLogger(Puzzle.class.getName());
+    private static final SecureRandom RND = new SecureRandom();
 
     public static int[] cloneArr(int[] src) {
         int[] dest = new int[src.length];
@@ -150,14 +153,12 @@ public abstract class Puzzle implements Exportable {
 
     @Export
     public final String generateScramble() {
-        final var r = SeededRng.createWithoutSeed();
-        return generateWcaScramble(r);
+        return generateWcaScramble(RND);
     }
 
     @Export
     public final String[] generateScrambles(int count) {
-        final var r = SeededRng.createWithoutSeed();
-        return generateScrambles(r, count);
+        return generateScrambles(RND, count);
     }
 
     /**
@@ -177,13 +178,18 @@ public abstract class Puzzle implements Exportable {
     }
 
     private String generateSeededScramble(byte[] seed) {
-        final var r = SeededRng.create(seed);
+        final var r = createRandom(seed);
         return generateWcaScramble(r);
     }
 
     private String[] generateSeededScrambles(byte[] seed, int count) {
-        final var r = SeededRng.create(seed);
+        final var r = createRandom(seed);
         return generateScrambles(r, count);
+    }
+
+    private RandomGenerator createRandom(byte[] seed) {
+        final var r = RandomGeneratorFactory.of("SecureRandom");
+        return r.create(seed);
     }
 
     /**
