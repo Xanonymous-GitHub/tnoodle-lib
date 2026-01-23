@@ -13,7 +13,6 @@ plugins {
     `maven-publish`
     signing
     alias(libs.plugins.shadow)
-    kotlin("jvm")
 }
 
 attachRemoteRepositories()
@@ -36,7 +35,6 @@ dependencies {
     testImplementation(libs.junit.jupiter.engine)
 
     testRuntimeOnly(libs.junit.platform.launcher)
-    implementation(kotlin("stdlib-jdk8"))
 }
 
 configureJUnit5()
@@ -51,10 +49,4 @@ tasks.shadowJar {
     // https://github.com/GradleUp/shadow/issues/111
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true
-}
-repositories {
-    mavenCentral()
-}
-kotlin {
-    jvmToolchain(25)
 }
