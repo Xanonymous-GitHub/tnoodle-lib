@@ -1,0 +1,4 @@
+module TNoodle {
+  header "TNoodle.h"
+  export *
+}
