@@ -9,7 +9,8 @@ if [[ -n "${JAVA_HOME:-}" ]]; then
   echo "JAVA_HOME=$JAVA_HOME"
 fi
 
-./gradlew -q showClassPath > build/apple-classpath.txt
+mkdir -p build
+./gradlew -q showClassPath >| build/apple-classpath.txt
 
 # For iOS/macOS native build we intentionally do NOT translate third-party libs
 # If third-party libs stays on the classpath, it will drag in third-party libs-only sources and break translation.
