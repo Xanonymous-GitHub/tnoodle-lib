@@ -70,19 +70,6 @@ has_arch() {
   lipo -archs "$file" 2>/dev/null | tr ' ' '\n' | grep -Fxq "$arch"
 }
 
-BUILD_SIM_X86_64="${BUILD_SIM_X86_64:-auto}"
-can_build_sim_x86_64() {
-  if [[ "$BUILD_SIM_X86_64" == "0" ]]; then return 1; fi
-  if [[ "$BUILD_SIM_X86_64" == "1" ]]; then return 0; fi
-  local tmp
-  tmp="$(mktemp -t tnoodle_x86_64_test).o"
-  if xcrun --sdk iphonesimulator clang -arch x86_64 -c -x c /dev/null -o "$tmp" >/dev/null 2>&1; then
-    rm -f "$tmp"; return 0
-  fi
-  rm -f "$tmp" >/dev/null 2>&1 || true
-  return 1
-}
-
 j2objc_runtime_lib_for_sdk() {
   # Usage: j2objc_runtime_lib_for_sdk <sdk> <runtime_lib>
   local sdk="$1" rt="$2"
@@ -248,18 +235,9 @@ stage_headers "$HDRROOT"
 compile_one iphoneos arm64 "$BUILDDIR/iphoneos-arm64"
 compile_one iphonesimulator arm64 "$BUILDDIR/iphonesim-arm64"
 
+# Arm64-only simulator slice (Apple Silicon). No x86_64 simulator build.
 mkdir -p "$BUILDDIR/iphonesim-universal/lib"
-
-if can_build_sim_x86_64; then
-  compile_one iphonesimulator x86_64 "$BUILDDIR/iphonesim-x86_64"
-  lipo -create \
-    "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" \
-    "$BUILDDIR/iphonesim-x86_64/lib/libTNoodle.a" \
-    -output "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
-else
-  echo "[WARN] Skipping iphonesimulator x86_64 slice (BUILD_SIM_X86_64=$BUILD_SIM_X86_64)"
-  cp -f "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
-fi
+cp -f "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
 
 if [[ "$STRIP_SYMBOLS" == "1" ]]; then
   xcrun --sdk iphonesimulator strip -S -x "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a" >/dev/null 2>&1 || true
