@@ -143,15 +143,15 @@ compile_one() {
   minverflag="$(min_version_flag_for_sdk "$sdk")"
 
   while IFS= read -r -d '' f; do
-    local rel="${f#$OBJCDIR/}"
+    local rel="${f#"$OBJCDIR"/}"
     local o="$outdir/obj/${rel%.m}.o"
     mkdir -p "$(dirname "$o")"
 
     xcrun --sdk "$sdk" clang \
-      -arch "$arch" $(clang_optflags) -g0 \
+      -arch "$arch" "$(clang_optflags)" -g0 \
       -DNDEBUG \
       -ffunction-sections -fdata-sections \
-      $minverflag \
+      "$minverflag" \
       "$arcflag" \
       -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
       -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
@@ -169,10 +169,10 @@ compile_one() {
   mkdir -p "$(dirname "$wrapper_o")"
 
   xcrun --sdk "$sdk" clang \
-    -arch "$arch" $(clang_optflags) -g0 \
+    -arch "$arch" "$(clang_optflags)" -g0 \
     -DNDEBUG \
     -ffunction-sections -fdata-sections \
-    $minverflag \
+    "$minverflag" \
     "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
@@ -201,10 +201,10 @@ EOF
 
   local forcelink_o="$outdir/obj/__tnoodle_wrapper__/TNoodleForceLink.o"
   xcrun --sdk "$sdk" clang \
-    -arch "$arch" $(clang_optflags) -g0 \
+    -arch "$arch" "$(clang_optflags)" -g0 \
     -DNDEBUG \
     -ffunction-sections -fdata-sections \
-    $minverflag \
+    "$minverflag" \
     "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
