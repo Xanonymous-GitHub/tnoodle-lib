@@ -2,10 +2,12 @@ package org.worldcubeassociation.tnoodle.scrambles;
 
 import static java.lang.Math.ceil;
 
+import java.io.Serial;
 import java.security.SecureRandom;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -81,6 +83,16 @@ public abstract class Puzzle implements Exportable {
     }
 
     protected int wcaMinScrambleDistance = 2;
+
+    private static long hash64(byte[] data) {
+        // FNV-1a 64-bit (fast, stable). Good enough for scramble determinism.
+        long h = 0xcbf29ce484222325L;
+        for (byte b : data) {
+            h ^= (b & 0xff);
+            h *= 0x100000001b3L;
+        }
+        return h;
+    }
 
     /**
      * Returns a String describing this Scrambler
@@ -177,12 +189,12 @@ public abstract class Puzzle implements Exportable {
     }
 
     private String generateSeededScramble(byte[] seed) {
-        final var rs = new SecureRandom(seed);
+        final Random rs = new FastDeterministicRandom(hash64(seed));
         return generateWcaScramble(rs);
     }
 
     private String[] generateSeededScrambles(byte[] seed, int count) {
-        final var rs = new SecureRandom(seed);
+        final Random rs = new FastDeterministicRandom(hash64(seed));
         return generateScrambles(rs, count);
     }
 
@@ -270,11 +282,12 @@ public abstract class Puzzle implements Exportable {
         // This is a hack I don't fully understand that prevents aliasing of
         // vertical and horizontal lines.
         // See http://stackoverflow.com/questions/7589650/drawing-grid-with-jquery-svg-produces-2px-lines-instead-of-1px
-        Group g = new Group();
-        List<Element> children = svg.getChildren();
-        while (!children.isEmpty()) {
-            //noinspection SequencedCollectionMethodCanBeUsed (compatible to j2objc default jre emulation)
-            g.appendChild(children.remove(0));
+        final Group g = new Group();
+        final List<Element> children = svg.getChildren();
+        final List<Element> snapshot = new ArrayList<>(children);
+        children.clear();
+        for (final Element e : snapshot) {
+            g.appendChild(e);
         }
         g.translate(0.5, 0.5);
         svg.appendChild(g);
@@ -546,13 +559,27 @@ public abstract class Puzzle implements Exportable {
         AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.NO_MERGING);
         while (ab.getTotalCost() < getRandomMoveCount()) {
             Map<String, ? extends PuzzleState> successors = ab.getState().getScrambleSuccessors();
+            ArrayList<String> moves = new ArrayList<>(successors.keySet());
             String move;
             try {
                 do {
-                    move = choose(r, successors.keySet());
-                    // If this move happens to be redundant, there is no
-                    // reason to select this move again in vain.
-                    successors.remove(move);
+                    int i = r.nextInt(moves.size());
+                    move = moves.get(i);
+
+                    if (ab.isRedundant(move)) {
+                        int last = moves.size() - 1;
+                        moves.set(i, moves.get(last));
+                        moves.remove(last);
+
+                        // also remove from map to keep parity with old behavior
+                        successors.remove(move);
+
+                        // If everything is redundant, this state is pathological; avoid infinite loop.
+                        if (moves.isEmpty()) {
+                            // Fallback: just break and let next outer iteration rebuild successors.
+                            break;
+                        }
+                    }
                 } while (ab.isRedundant(move));
                 ab.appendMove(move);
             } catch (InvalidMoveException e) {
@@ -564,12 +591,12 @@ public abstract class Puzzle implements Exportable {
     }
 
     public static class Bucket<H> implements Comparable<Bucket<H>> {
-        private final LinkedList<H> contents;
+        private final ArrayDeque<H> contents;
         private final int value;
 
         public Bucket(int value) {
             this.value = value;
-            this.contents = new LinkedList<>();
+            this.contents = new ArrayDeque<>();
         }
 
         public int getValue() {
@@ -594,7 +621,7 @@ public abstract class Puzzle implements Exportable {
 
         @Override
         public int compareTo(Bucket<H> other) {
-            return this.value - other.value;
+            return Integer.compare(this.value, other.value);
         }
 
         public int hashCode() {
@@ -656,6 +683,39 @@ public abstract class Puzzle implements Exportable {
 
         public boolean equals(Object o) {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class FastDeterministicRandom extends Random {
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        // SplitMix64: tiny, fast, deterministic, and easy to implement without extra JDK APIs.
+        // Good enough for scramble determinism.
+        private long state;
+
+        FastDeterministicRandom(long seed) {
+            // Random(long) would apply its own scrambling; we want exact seed determinism.
+            super(0L);
+            this.state = seed;
+        }
+
+        @Override
+        protected int next(int bits) {
+            return (int) (nextLongInternal() >>> (64 - bits));
+        }
+
+        @Override
+        public void setSeed(long seed) {
+            // Random calls setSeed during construction; keep it simple.
+            this.state = seed;
+        }
+
+        private long nextLongInternal() {
+            long z = (state += 0x9E3779B97F4A7C15L);
+            z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+            z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+            return z ^ (z >>> 31);
         }
     }
 
