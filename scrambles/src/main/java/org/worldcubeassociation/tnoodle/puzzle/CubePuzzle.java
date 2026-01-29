@@ -20,6 +20,8 @@ public class CubePuzzle extends Puzzle {
 
     private static final String[] DIR_TO_STR = new String[] { null, "", "2", "'" };
     private static final Map<Face, String> faceRotationsByName = new HashMap<>();
+    private static final Face[] FACES = Face.values();
+    private static final String[] FACE_NAMES = new String[] { "R", "U", "F", "L", "D", "B" };
     private static final int gap = 2;
     private static final int cubieSize = 10;
     private static final int[] DEFAULT_LENGTHS = { 0, 0, 25, 25, 40, 60, 80, 100, 120, 140, 160, 180 };
@@ -41,6 +43,7 @@ public class CubePuzzle extends Puzzle {
     }
 
     protected final int size;
+    private final Map<Integer, CubeMove[][]> randomOrientationMovesCache = new HashMap<>();
 
     public CubePuzzle(int size) {
         assert size >= 0 && size < DEFAULT_LENGTHS.length : "Invalid cube size";
@@ -179,6 +182,11 @@ public class CubePuzzle extends Puzzle {
     }
 
     protected CubeMove[][] getRandomOrientationMoves(int thickness) {
+        CubeMove[][] cached = randomOrientationMovesCache.get(thickness);
+        if (cached != null) {
+            return cached;
+        }
+
         CubeMove[] randomUFaceMoves = new CubeMove[] {
             null,
             new CubeMove(Face.R, 1, thickness),
@@ -208,6 +216,8 @@ public class CubePuzzle extends Puzzle {
                 randomOrientationMoves[i++] = movesArr;
             }
         }
+
+        randomOrientationMovesCache.put(thickness, randomOrientationMoves);
         return randomOrientationMoves;
     }
 
@@ -240,13 +250,37 @@ public class CubePuzzle extends Puzzle {
         paintCubeFace(g, 2 * gap + size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.F.ordinal()], colorScheme);
     }
 
+    private String moveToString(Face face, int dir, int innerSlice, int outerSlice) {
+        // We haven't come up with names for moves where outerSlice != 0
+        assert outerSlice == 0;
+
+        String f = face.toString();
+        String move;
+        if (innerSlice == 0) {
+            move = f;
+        } else if (innerSlice == 1) {
+            move = f + "w";
+        } else if (innerSlice == size - 1) {
+            // Turning all the slices is a rotation
+            String rotationName = faceRotationsByName.get(face);
+            if (rotationName == null) {
+                // Not all rotations are actually named.
+                return null;
+            }
+            move = rotationName;
+        } else {
+            move = (innerSlice + 1) + f + "w";
+        }
+        return move + DIR_TO_STR[dir];
+    }
+
     private void paintCubeFace(Svg g, int x, int y, int size, int cubieSize, int[][] faceColors, Map<String, Color> colorScheme) {
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
                 int tempx = x + col * cubieSize;
                 int tempy = y + row * cubieSize;
                 Rectangle rect = new Rectangle(tempx, tempy, cubieSize, cubieSize);
-                rect.setFill(colorScheme.get(Face.values()[faceColors[row][col]].toString()));
+                rect.setFill(colorScheme.get(FACE_NAMES[faceColors[row][col]]));
                 rect.setStroke(Color.BLACK);
                 g.appendChild(rect);
             }
@@ -416,32 +450,16 @@ public class CubePuzzle extends Puzzle {
         }
 
         public String toString() {
-            String f = face.toString();
-            String move;
-            if (innerSlice == 0) {
-                move = f;
-            } else if (innerSlice == 1) {
-                move = f + "w";
-            } else if (innerSlice == size - 1) {
-                // Turning all the slices is a rotation
-                String rotationName = faceRotationsByName.get(face);
-                if (rotationName == null) {
-                    // Not all rotations are actually named.
-                    return null;
-                }
-                move = rotationName;
-            } else {
-                move = (innerSlice + 1) + f + "w";
-            }
-            move += DIR_TO_STR[dir];
-
-            return move;
+            return CubePuzzle.this.moveToString(face, dir, innerSlice, outerSlice);
         }
     }
 
     public class CubeState extends PuzzleState {
         private final int[][][] image;
         private CubeState normalizedState = null;
+        private transient Map<String, CubeState> successorsByNameCache;
+        private transient Map<String, CubeState> scrambleSuccessorsCache;
+        private transient Map<PuzzleState, String> canonicalMovesByStateCache;
 
         public CubeState() {
             image = new int[6][size][size];
@@ -498,9 +516,9 @@ public class CubePuzzle extends Puzzle {
             int bColor = stickersByPiece[7][1];
             int lColor = stickersByPiece[7][2];
 
-            int uColor = Face.values()[dColor].oppositeFace().ordinal();
-            int fColor = Face.values()[bColor].oppositeFace().ordinal();
-            int rColor = Face.values()[lColor].oppositeFace().ordinal();
+            int uColor = FACES[dColor].oppositeFace().ordinal();
+            int fColor = FACES[bColor].oppositeFace().ordinal();
+            int rColor = FACES[lColor].oppositeFace().ordinal();
 
             int[] colorToVal = new int[8];
             colorToVal[uColor] = 0;
@@ -555,23 +573,30 @@ public class CubePuzzle extends Puzzle {
 
         @Override
         public Map<String, CubeState> getSuccessorsByName() {
-            return getSuccessorsWithinSlice(size - 1, true);
+            if (successorsByNameCache == null) {
+                successorsByNameCache = getSuccessorsWithinSlice(size - 1, true);
+            }
+            return successorsByNameCache;
         }
 
         @Override
         public Map<String, CubeState> getScrambleSuccessors() {
-            return getSuccessorsWithinSlice((size / 2) - 1, false);
+            if (scrambleSuccessorsCache == null) {
+                scrambleSuccessorsCache = getSuccessorsWithinSlice((size / 2) - 1, false);
+            }
+            return scrambleSuccessorsCache;
         }
 
         @Override
         public Map<? extends PuzzleState, String> getCanonicalMovesByState() {
-            Map<PuzzleState, String> reversed = new HashMap<>();
-
-            for (Map.Entry<String, ? extends PuzzleState> entry : getScrambleSuccessors().entrySet()) {
-                reversed.put(entry.getValue(), entry.getKey());
+            if (canonicalMovesByStateCache == null) {
+                Map<PuzzleState, String> reversed = new HashMap<>();
+                for (final var entry : getScrambleSuccessors().entrySet()) {
+                    reversed.put(entry.getValue(), entry.getKey());
+                }
+                canonicalMovesByStateCache = reversed;
             }
-
-            return reversed;
+            return canonicalMovesByStateCache;
         }
 
         private Map<String, CubeState> getSuccessorsWithinSlice(int maxSlice, boolean includeRedundant) {
@@ -585,8 +610,7 @@ public class CubePuzzle extends Puzzle {
                     }
                     int outerSlice = 0;
                     for (int dir = 1; dir <= 3; dir++) {
-                        CubeMove move = new CubeMove(face, dir, innerSlice, outerSlice);
-                        String moveStr = move.toString();
+                        final String moveStr = CubePuzzle.this.moveToString(face, dir, innerSlice, outerSlice);
                         if (moveStr == null) {
                             // Skip unnamed rotations.
                             continue;
