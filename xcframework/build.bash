@@ -38,7 +38,7 @@ fi
 
 # ---- Size/perf knobs ----
 IOS_MIN_VERSION="${IOS_MIN_VERSION:-18.7}"  # deployment target
-OPTIMIZE_FOR="${OPTIMIZE_FOR:-balanced}"        # size|balanced|speed
+OPTIMIZE_FOR="${OPTIMIZE_FOR:-speed}"        # size|balanced|speed
 STRIP_SYMBOLS="${STRIP_SYMBOLS:-1}"
 
 clang_optflags() {
