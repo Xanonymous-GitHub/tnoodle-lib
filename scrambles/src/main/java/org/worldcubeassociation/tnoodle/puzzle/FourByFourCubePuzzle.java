@@ -14,10 +14,11 @@ import cs.threephase.Search;
 
 @Export
 public class FourByFourCubePuzzle extends CubePuzzle {
-    private static final ThreadLocal<Search> THREE_PHASE_SEARCHER = ThreadLocal.withInitial(Search::new);
+    private final ThreadLocal<Search> threePhaseSearcher;
 
     public FourByFourCubePuzzle() {
         super(4);
+        threePhaseSearcher = ThreadLocal.withInitial(Search::new);
     }
 
     public double getInitializationStatus() {
@@ -26,13 +27,12 @@ public class FourByFourCubePuzzle extends CubePuzzle {
 
     @Override
     public PuzzleStateAndGenerator generateRandomMoves(Random r) {
-        final Search search = THREE_PHASE_SEARCHER.get();
-        final String scramble = search.randomState(r);
-        final AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.CANONICALIZE_MOVES);
+        String scramble = threePhaseSearcher.get().randomState(r);
+        AlgorithmBuilder ab = new AlgorithmBuilder(this, MergingMode.CANONICALIZE_MOVES);
         try {
             ab.appendAlgorithm(scramble);
         } catch (InvalidMoveException e) {
-            throw new RuntimeException("threephase produced an invalid scramble: " + scramble, new InvalidScrambleException(scramble, e));
+            throw new RuntimeException(new InvalidScrambleException(scramble, e));
         }
         return ab.getStateAndGenerator();
     }
