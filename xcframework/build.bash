@@ -7,65 +7,76 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ---- Output layout ----
 OUT="$PWD/build/apple"
-OBJCDIR="$OUT/objc"          # produced by your prepare-build.bash (j2objc translation output)
+OBJCDIR="$OUT/objc"          # produced by prepare-build.bash (j2objc translation output)
 BUILDDIR="$OUT/build"        # per-SDK/arch object + lib output
 HDRROOT="$OUT/Headers"       # staged *public* headers for the XCFramework (minimal API)
 
 rm -rf "$BUILDDIR" "$HDRROOT"
 mkdir -p "$BUILDDIR" "$HDRROOT"
 
-# ---- Helpers ----
-# Which J2ObjC runtime library to embed into libTNoodle.a.
-# Default is the full emulation runtime (most compatible).
-# You can try J2OBJC_RUNTIME=jre_core for smaller output *only if it links and runs for your code*.
-
+# ---- Runtime libs selection ----
+# Backward compatible default: if J2OBJC_RUNTIME_LIBS is unset, fall back to J2OBJC_RUNTIME (default: jre_emul).
 J2OBJC_RUNTIME="${J2OBJC_RUNTIME:-jre_emul}"
+J2OBJC_RUNTIME_LIBS_STR="${J2OBJC_RUNTIME_LIBS:-}"
 
-# ---- Arch helpers ----
-# NOTE: Do NOT use grep "\\b" for arch matching. In basic grep regex, "\\b" is a backspace escape, not a word-boundary.
-# Use `lipo -archs` and exact matching instead.
+# Accepted formats:
+#   J2OBJC_RUNTIME_LIBS="jre_core jre_security"
+#   J2OBJC_RUNTIME_LIBS="jre_core,jre_security"
+#   J2OBJC_RUNTIME_LIBS="jre_core:jre_security"
+if [[ -z "$J2OBJC_RUNTIME_LIBS_STR" ]]; then
+  J2OBJC_RUNTIME_LIBS=("$J2OBJC_RUNTIME")
+else
+  J2OBJC_RUNTIME_LIBS_STR="${J2OBJC_RUNTIME_LIBS_STR//,/ }"
+  J2OBJC_RUNTIME_LIBS_STR="${J2OBJC_RUNTIME_LIBS_STR//:/ }"
+  read -r -a J2OBJC_RUNTIME_LIBS <<< "$J2OBJC_RUNTIME_LIBS_STR"
+fi
+
+if [[ "${#J2OBJC_RUNTIME_LIBS[@]}" -eq 0 ]]; then
+  echo "[ERROR] J2OBJC_RUNTIME_LIBS resolved to an empty list" >&2
+  exit 1
+fi
+
+# ---- Size/perf knobs ----
+IOS_MIN_VERSION="${IOS_MIN_VERSION:-18.7}"  # deployment target
+OPTIMIZE_FOR="${OPTIMIZE_FOR:-speed}"        # size|balanced|speed
+STRIP_SYMBOLS="${STRIP_SYMBOLS:-1}"
+
+clang_optflags() {
+  case "$OPTIMIZE_FOR" in
+    size)     echo "-Oz" ;;
+    balanced) echo "-O2" ;;
+    speed)    echo "-O3" ;;
+    *)
+      echo "[ERROR] OPTIMIZE_FOR must be one of: size|balanced|speed (got '$OPTIMIZE_FOR')" >&2
+      exit 1
+      ;;
+  esac
+}
+
+min_version_flag_for_sdk() {
+  local sdk="$1"
+  case "$sdk" in
+    iphoneos)        echo "-miphoneos-version-min=${IOS_MIN_VERSION}" ;;
+    iphonesimulator) echo "-mios-simulator-version-min=${IOS_MIN_VERSION}" ;;
+    *)
+      echo "[ERROR] Unsupported sdk for min version flag: $sdk" >&2
+      exit 1
+      ;;
+  esac
+}
+
 has_arch() {
-  # Usage: has_arch <binary_or_archive> <arch>
   local file="$1" arch="$2"
-  # `lipo -archs` prints a space-separated list of architectures.
-  # We split and match exact tokens.
   lipo -archs "$file" 2>/dev/null | tr ' ' '\n' | grep -Fxq "$arch"
 }
 
-# Simulator x86_64 is optional (depends on toolchain + host).
-# Set BUILD_SIM_X86_64=0 to skip it (smaller + faster; OK if you don't need Intel sim support).
-BUILD_SIM_X86_64="${BUILD_SIM_X86_64:-auto}"
-can_build_sim_x86_64() {
-  if [[ "$BUILD_SIM_X86_64" == "0" ]]; then
-    return 1
-  fi
-  if [[ "$BUILD_SIM_X86_64" == "1" ]]; then
-    return 0
-  fi
-  # auto-detect: try compiling an empty file for iphonesimulator/x86_64
-  local tmp
-  tmp="$(mktemp -t tnoodle_x86_64_test).o"
-  if xcrun --sdk iphonesimulator clang -arch x86_64 -c -x c /dev/null -o "$tmp" >/dev/null 2>&1; then
-    rm -f "$tmp"
-    return 0
-  fi
-  rm -f "$tmp" >/dev/null 2>&1 || true
-  return 1
-}
-
 j2objc_runtime_lib_for_sdk() {
-  # Usage: j2objc_runtime_lib_for_sdk <sdk>
-  # Returns absolute path to the appropriate libjre_*.a slice for that SDK.
-  local sdk="$1"
+  # Usage: j2objc_runtime_lib_for_sdk <sdk> <runtime_lib>
+  local sdk="$1" rt="$2"
   local base="$J2OBJC_HOME/lib"
-
   case "$sdk" in
-    iphoneos)
-      echo "$base/iphone/lib${J2OBJC_RUNTIME}.a"
-      ;;
-    iphonesimulator)
-      echo "$base/simulator/lib${J2OBJC_RUNTIME}.a"
-      ;;
+    iphoneos)        echo "$base/iphone/lib${rt}.a" ;;
+    iphonesimulator) echo "$base/simulator/lib${rt}.a" ;;
     *)
       echo "[ERROR] Unsupported sdk: $sdk" >&2
       return 1
@@ -74,18 +85,11 @@ j2objc_runtime_lib_for_sdk() {
 }
 
 # Stage headers: curated umbrella header + module map only.
-# IMPORTANT: Only ship minimal public headers (.h) and module.modulemap.
-# Do NOT ship translated or J2ObjC runtime headers.
 stage_headers() {
   local dest="$1"
   rm -rf "$dest"
   mkdir -p "$dest"
 
-  # We intentionally ship a *tiny* public API surface.
-  # The translated J2ObjC headers and J2ObjC runtime headers are used only at build time,
-  # and are NOT copied into the XCFramework headers directory.
-
-  # Copy curated umbrella header.
   if [[ -f "$SCRIPT_DIR/TNoodle.h" ]]; then
     cp -f "$SCRIPT_DIR/TNoodle.h" "$dest/TNoodle.h"
   elif [[ -f "$SCRIPT_DIR/Tnoodle.h" ]]; then
@@ -95,16 +99,13 @@ stage_headers() {
     exit 1
   fi
 
-  # Copy module map.
   if [[ -f "$SCRIPT_DIR/module.modulemap" ]]; then
     cp -f "$SCRIPT_DIR/module.modulemap" "$dest/module.modulemap"
   else
-    # Fallback minimal modulemap.
     cat > "$dest/module.modulemap" <<'EOF'
 module TNoodle {
-  umbrella "."
+  header "TNoodle.h"
   export *
-  module * { export * }
 }
 EOF
   fi
@@ -114,60 +115,51 @@ compile_one() {
   local sdk="$1" arch="$2" outdir="$3"
   mkdir -p "$outdir/obj" "$outdir/lib"
 
-  local j2rt
-  j2rt="$(j2objc_runtime_lib_for_sdk "$sdk")"
-  if [[ ! -f "$j2rt" ]]; then
-    echo "[ERROR] Missing J2ObjC runtime library for $sdk: $j2rt" >&2
-    echo "        Check J2OBJC_HOME and/or build j2objc dist with the needed targets." >&2
-    exit 1
-  fi
-
-  # IMPORTANT: J2ObjC runtime libs are often FAT (contain multiple archs).
-  # If we pass a fat runtime into libtool, it may pick the wrong slice and
-  # produce a lib with an unexpected architecture (e.g., arm64 for an x86_64 build).
-  # So we *always* thin the runtime to the target arch before re-packing.
-  local j2rt_thin="$outdir/lib/lib${J2OBJC_RUNTIME}_${sdk}_${arch}.a"
-  if [[ -f "$j2rt" ]]; then
-    # Ensure the runtime actually contains the requested arch.
+  # Thin each runtime lib to the target arch
+  local j2rt_thins=()
+  for rt in "${J2OBJC_RUNTIME_LIBS[@]}"; do
+    local j2rt
+    j2rt="$(j2objc_runtime_lib_for_sdk "$sdk" "$rt")"
+    if [[ ! -f "$j2rt" ]]; then
+      echo "[ERROR] Missing J2ObjC runtime library for $sdk: $j2rt" >&2
+      exit 1
+    fi
     if ! has_arch "$j2rt" "$arch"; then
       echo "[ERROR] J2ObjC runtime library does not contain arch '$arch': $j2rt" >&2
       echo "        lipo -archs => $(lipo -archs "$j2rt" 2>/dev/null || true)" >&2
       exit 1
     fi
-    # Extract the exact slice we want.
-    lipo -thin "$arch" "$j2rt" -output "$j2rt_thin"
-  else
-    echo "[ERROR] Missing J2ObjC runtime library: $j2rt" >&2
-    exit 1
-  fi
+    local thin="$outdir/lib/lib${rt}_${sdk}_${arch}.a"
+    lipo -thin "$arch" "$j2rt" -output "$thin"
+    j2rt_thins+=("$thin")
+  done
 
-  # If translated sources contain the J2ObjC ARC guard, compile without ARC.
-  # Otherwise (when translated with `j2objc -use-arc`), compile with ARC.
   local arcflag="-fobjc-arc"
   if grep -R "must not be compiled with ARC" -n "$OBJCDIR" >/dev/null 2>&1; then
     arcflag="-fno-objc-arc"
   fi
 
-  # Compile each .m, preserving relative paths to avoid basename collisions.
+  local minverflag
+  minverflag="$(min_version_flag_for_sdk "$sdk")"
+
   while IFS= read -r -d '' f; do
-    # Strip the OBJCDIR prefix to keep object paths short and stable.
-    local rel="${f#$OBJCDIR/}"
+    local rel="${f#"$OBJCDIR"/}"
     local o="$outdir/obj/${rel%.m}.o"
     mkdir -p "$(dirname "$o")"
 
     xcrun --sdk "$sdk" clang \
-      -arch "$arch" -O2 -g0 \
+      -arch "$arch" "$(clang_optflags)" -g0 \
+      -DNDEBUG \
+      -ffunction-sections -fdata-sections \
+      "$minverflag" \
       "$arcflag" \
       -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
       -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
       -c "$f" -o "$o"
   done < <(find "$OBJCDIR" -name '*.m' -print0)
 
-  # Compile the curated wrapper (bridges a tiny stable API to the generated J2ObjC classes).
   local wrapper_m="$SCRIPT_DIR/TNoodle.m"
-  if [[ ! -f "$wrapper_m" ]]; then
-    wrapper_m="$SCRIPT_DIR/Tnoodle.m"
-  fi
+  if [[ ! -f "$wrapper_m" ]]; then wrapper_m="$SCRIPT_DIR/Tnoodle.m"; fi
   if [[ ! -f "$wrapper_m" ]]; then
     echo "[ERROR] Missing curated wrapper next to build.bash: TNoodle.m (or Tnoodle.m)" >&2
     exit 1
@@ -177,19 +169,20 @@ compile_one() {
   mkdir -p "$(dirname "$wrapper_o")"
 
   xcrun --sdk "$sdk" clang \
-    -arch "$arch" -O2 -g0 \
+    -arch "$arch" "$(clang_optflags)" -g0 \
+    -DNDEBUG \
+    -ffunction-sections -fdata-sections \
+    "$minverflag" \
     "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
     -c "$wrapper_m" -o "$wrapper_o"
 
-  # Force-link security provider classes that may be dynamically loaded via reflection.
-  # This helps avoid runtime errors like: java.security.NoSuchProviderException: no such provider: SUN
-  # when the provider implementation exists in the embedded J2ObjC runtime but was dead-stripped.
+  # (Optional) force-link file - keep as you had it, if you need it.
   local forcelink_m="$outdir/obj/__tnoodle_wrapper__/TNoodleForceLink.m"
   cat > "$forcelink_m" <<'EOF'
-// This file is auto-generated by build.bash.
-// It references security provider classes so the linker can keep them.
+// Auto-generated.
+// References security provider classes so the linker can keep them.
 
 #if __has_include("sun/security/provider/Sun.h")
 #import "sun/security/provider/Sun.h"
@@ -208,57 +201,53 @@ EOF
 
   local forcelink_o="$outdir/obj/__tnoodle_wrapper__/TNoodleForceLink.o"
   xcrun --sdk "$sdk" clang \
-    -arch "$arch" -O2 -g0 \
+    -arch "$arch" "$(clang_optflags)" -g0 \
+    -DNDEBUG \
+    -ffunction-sections -fdata-sections \
+    "$minverflag" \
     "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
     -c "$forcelink_m" -o "$forcelink_o"
 
-  # 1) Create a static library from translated objects.
   local filelist="$outdir/objfiles.txt"
   find "$outdir/obj" -name '*.o' -print > "$filelist"
   /usr/bin/libtool -static -o "$outdir/lib/libTNoodle_obj.a" -filelist "$filelist"
 
-  # 2) Re-pack into the final libTNoodle.a, embedding the J2ObjC runtime library.
-  # This avoids shipping JRE.xcframework separately.
   /usr/bin/libtool -static -o "$outdir/lib/libTNoodle.a" \
     "$outdir/lib/libTNoodle_obj.a" \
-    "$j2rt_thin"
+    "${j2rt_thins[@]}"
 
-  # Sanity check: the produced library must match the requested arch.
+  if [[ "$STRIP_SYMBOLS" == "1" ]]; then
+    xcrun --sdk "$sdk" strip -S -x "$outdir/lib/libTNoodle.a" >/dev/null 2>&1 || true
+  fi
+
   if ! has_arch "$outdir/lib/libTNoodle.a" "$arch"; then
     echo "[ERROR] Produced libTNoodle.a does not contain expected arch '$arch'" >&2
-    echo "        lib: $outdir/lib/libTNoodle.a" >&2
     echo "        lipo -archs => $(lipo -archs "$outdir/lib/libTNoodle.a" 2>/dev/null || true)" >&2
     exit 1
   fi
 }
 
 # ---- Build slices (iOS only) ----
-# iOS/iPadOS device: arm64 (iphoneos)
 stage_headers "$HDRROOT"
+
 compile_one iphoneos arm64 "$BUILDDIR/iphoneos-arm64"
+compile_one iphonesimulator arm64 "$BUILDDIR/iphonesim-arm64"
 
-# iOS simulator: arm64 (+ optional x86_64)
-compile_one iphonesimulator arm64  "$BUILDDIR/iphonesim-arm64"
-
+# Arm64-only simulator slice (Apple Silicon). No x86_64 simulator build.
 mkdir -p "$BUILDDIR/iphonesim-universal/lib"
+cp -f "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
 
-if can_build_sim_x86_64; then
-  compile_one iphonesimulator x86_64 "$BUILDDIR/iphonesim-x86_64"
-  lipo -create \
-    "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" \
-    "$BUILDDIR/iphonesim-x86_64/lib/libTNoodle.a" \
-    -output "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
-else
-  echo "[WARN] Skipping iphonesimulator x86_64 slice (BUILD_SIM_X86_64=$BUILD_SIM_X86_64)"
-  cp -f "$BUILDDIR/iphonesim-arm64/lib/libTNoodle.a" "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
+if [[ "$STRIP_SYMBOLS" == "1" ]]; then
+  xcrun --sdk iphonesimulator strip -S -x "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a" >/dev/null 2>&1 || true
+  xcrun --sdk iphoneos        strip -S -x "$BUILDDIR/iphoneos-arm64/lib/libTNoodle.a" >/dev/null 2>&1 || true
 fi
 
 lipo -archs "$BUILDDIR/iphoneos-arm64/lib/libTNoodle.a"
 lipo -archs "$BUILDDIR/iphonesim-universal/lib/libTNoodle.a"
 
-# ---- Package as XCFramework (iOS device + iOS simulator) ----
+# ---- Package as XCFramework ----
 XCF_OUT="$OUT/TNoodle.xcframework"
 rm -rf "$XCF_OUT"
 
@@ -270,10 +259,10 @@ xcodebuild -create-xcframework \
   -output "$XCF_OUT"
 
 echo "[OK] Created XCFramework: $XCF_OUT"
-echo "[OK] Embedded J2ObjC runtime: lib${J2OBJC_RUNTIME}.a (device+sim slices)"
+echo "[OK] Embedded J2ObjC runtime libs: ${J2OBJC_RUNTIME_LIBS[*]} (device+sim slices)"
 
 echo "[NOTE] Consumer link flags / frameworks (typical for J2ObjC):"
 echo "       -ObjC                     (may be needed when classes are loaded dynamically/reflection)"
 echo "       -liconv                   (required when using J2ObjC JRE charset/iconv)"
 echo "       -lz                       (needed if java.util.zip is used)"
-echo "       -framework Security       (needed if java.security / SecureRandom / crypto is used)"
+echo "       -framework Security       (required if any embedded runtime/lib uses jre_security)"

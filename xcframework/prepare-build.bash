@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-
 : "${J2OBJC_HOME:?Please export J2OBJC_HOME=/path/to/j2objc/dist}"
 
 # J2ObjC's public distribution historically supports JDK 8/11. Ensure a compatible JAVA_HOME.
@@ -10,7 +9,8 @@ if [[ -n "${JAVA_HOME:-}" ]]; then
   echo "JAVA_HOME=$JAVA_HOME"
 fi
 
-./gradlew -q showClassPath > build/apple-classpath.txt
+mkdir -p build
+./gradlew -q showClassPath >| build/apple-classpath.txt
 
 # For iOS/macOS native build we intentionally do NOT translate third-party libs
 # If third-party libs stays on the classpath, it will drag in third-party libs-only sources and break translation.
@@ -77,12 +77,40 @@ find "$WORKSRC" -path '*/src/main/java/*' -name '*.java' -print >> "$OUT/sources
 
 wc -l "$OUT/sources.txt"
 
-"$J2OBJC_HOME/j2objc" \
-  -use-arc \
-  -sourcepath "$SOURCEPATH" \
-  -classpath "$CLASSPATH" \
-  -d "$OBJCDIR" \
-  @"$OUT/sources.txt"
+# ---- J2ObjC translation flags (size-focused) ----
+# NOTE:
+# - `--dead-code-report` can significantly reduce output size, but the report must be generated
+#   with correct keep rules (otherwise you may accidentally remove required code).
+#   See: https://developers.google.com/j2objc/guides/dead-code-elimination
+J2OBJC_DEAD_CODE_REPORT="${J2OBJC_DEAD_CODE_REPORT:-}"
 
-find "$OBJCDIR" -name '*.m' | head
-find "$OBJCDIR" -name '*.h' | head
+# Strip Java reflection metadata to reduce size. Only enable if you don't rely on reflection.
+J2OBJC_STRIP_REFLECTION="${J2OBJC_STRIP_REFLECTION:-0}"
+
+# Remove @GwtIncompatible-marked methods to shrink output (safe for most non-GWT iOS uses).
+J2OBJC_STRIP_GWT_INCOMPATIBLE="${J2OBJC_STRIP_GWT_INCOMPATIBLE:-1}"
+
+j2objc_args=(
+  -use-arc
+  -sourcepath "$SOURCEPATH"
+  -classpath "$CLASSPATH"
+  -d "$OBJCDIR"
+)
+
+if [[ "$J2OBJC_STRIP_GWT_INCOMPATIBLE" == "1" ]]; then
+  j2objc_args+=(--strip-gwt-incompatible)
+fi
+
+if [[ "$J2OBJC_STRIP_REFLECTION" == "1" ]]; then
+  j2objc_args+=(--strip-reflection)
+fi
+
+if [[ -n "$J2OBJC_DEAD_CODE_REPORT" ]]; then
+  if [[ ! -f "$J2OBJC_DEAD_CODE_REPORT" ]]; then
+    echo "[ERROR] J2OBJC_DEAD_CODE_REPORT is set but file does not exist: $J2OBJC_DEAD_CODE_REPORT" >&2
+    exit 1
+  fi
+  j2objc_args+=(--dead-code-report "$J2OBJC_DEAD_CODE_REPORT")
+fi
+
+"$J2OBJC_HOME/j2objc" "${j2objc_args[@]}" @"$OUT/sources.txt"
