@@ -19,21 +19,16 @@ import org.worldcubeassociation.tnoodle.svglite.Svg;
 public class CubePuzzle extends Puzzle {
 
     private static final String[] DIR_TO_STR = new String[] { null, "", "2", "'" };
-    // Cache Enum.values() to avoid per-call array allocations on hot paths.
-    private static final Face[] FACES = Face.values();
-    // Opposite faces in the order of Face enum declaration: R,U,F,L,D,B
-    private static final Face[] OPPOSITE_FACE = new Face[] { Face.L, Face.D, Face.B, Face.R, Face.U, Face.F };
-    // Rotation names by face ordinal (null means unnamed rotation)
-    private static final String[] ROTATION_NAME_BY_FACE = new String[6];
+    private static final Map<Face, String> faceRotationsByName = new HashMap<>();
     private static final int gap = 2;
     private static final int cubieSize = 10;
     private static final int[] DEFAULT_LENGTHS = { 0, 0, 25, 25, 40, 60, 80, 100, 120, 140, 160, 180 };
     private static final Map<String, Color> defaultColorScheme = new HashMap<>();
 
     static {
-        ROTATION_NAME_BY_FACE[Face.R.ordinal()] = "x";
-        ROTATION_NAME_BY_FACE[Face.U.ordinal()] = "y";
-        ROTATION_NAME_BY_FACE[Face.F.ordinal()] = "z";
+        faceRotationsByName.put(Face.R, "x");
+        faceRotationsByName.put(Face.U, "y");
+        faceRotationsByName.put(Face.F, "z");
     }
 
     static {
@@ -237,29 +232,21 @@ public class CubePuzzle extends Puzzle {
     }
 
     private void drawCube(Svg g, int[][][] state, int gap, int cubieSize, Map<String, Color> colorScheme) {
-        final Color[] colorByFace = new Color[6];
-        colorByFace[Face.B.ordinal()] = colorScheme.get("B");
-        colorByFace[Face.D.ordinal()] = colorScheme.get("D");
-        colorByFace[Face.F.ordinal()] = colorScheme.get("F");
-        colorByFace[Face.L.ordinal()] = colorScheme.get("L");
-        colorByFace[Face.R.ordinal()] = colorScheme.get("R");
-        colorByFace[Face.U.ordinal()] = colorScheme.get("U");
-
-        paintCubeFace(g, gap, 2 * gap + size * cubieSize, size, cubieSize, state[Face.L.ordinal()], colorByFace);
-        paintCubeFace(g, 2 * gap + size * cubieSize, 3 * gap + 2 * size * cubieSize, size, cubieSize, state[Face.D.ordinal()], colorByFace);
-        paintCubeFace(g, 4 * gap + 3 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.B.ordinal()], colorByFace);
-        paintCubeFace(g, 3 * gap + 2 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.R.ordinal()], colorByFace);
-        paintCubeFace(g, 2 * gap + size * cubieSize, gap, size, cubieSize, state[Face.U.ordinal()], colorByFace);
-        paintCubeFace(g, 2 * gap + size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.F.ordinal()], colorByFace);
+        paintCubeFace(g, gap, 2 * gap + size * cubieSize, size, cubieSize, state[Face.L.ordinal()], colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, 3 * gap + 2 * size * cubieSize, size, cubieSize, state[Face.D.ordinal()], colorScheme);
+        paintCubeFace(g, 4 * gap + 3 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.B.ordinal()], colorScheme);
+        paintCubeFace(g, 3 * gap + 2 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.R.ordinal()], colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, gap, size, cubieSize, state[Face.U.ordinal()], colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.F.ordinal()], colorScheme);
     }
 
-    private void paintCubeFace(Svg g, int x, int y, int size, int cubieSize, int[][] faceColors, Color[] colorByFace) {
+    private void paintCubeFace(Svg g, int x, int y, int size, int cubieSize, int[][] faceColors, Map<String, Color> colorScheme) {
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
                 int tempx = x + col * cubieSize;
                 int tempy = y + row * cubieSize;
                 Rectangle rect = new Rectangle(tempx, tempy, cubieSize, cubieSize);
-                rect.setFill(colorByFace[faceColors[row][col]]);
+                rect.setFill(colorScheme.get(Face.values()[faceColors[row][col]].toString()));
                 rect.setStroke(Color.BLACK);
                 g.appendChild(rect);
             }
@@ -278,11 +265,7 @@ public class CubePuzzle extends Puzzle {
 
     private int[][][] cloneImage(int[][][] image) {
         int[][][] imageCopy = new int[image.length][image[0].length][image[0][0].length];
-        for (int f = 0; f < image.length; f++) {
-            for (int r = 0; r < image[f].length; r++) {
-                System.arraycopy(image[f][r], 0, imageCopy[f][r], 0, image[f][r].length);
-            }
-        }
+        deepCopy(image, imageCopy);
         return imageCopy;
     }
 
@@ -406,7 +389,7 @@ public class CubePuzzle extends Puzzle {
         B;
 
         public Face oppositeFace() {
-            return OPPOSITE_FACE[ordinal()];
+            return values()[(ordinal() + 3) % 6];
         }
     }
 
@@ -441,7 +424,7 @@ public class CubePuzzle extends Puzzle {
                 move = f + "w";
             } else if (innerSlice == size - 1) {
                 // Turning all the slices is a rotation
-                String rotationName = ROTATION_NAME_BY_FACE[face.ordinal()];
+                String rotationName = faceRotationsByName.get(face);
                 if (rotationName == null) {
                     // Not all rotations are actually named.
                     return null;
@@ -515,9 +498,9 @@ public class CubePuzzle extends Puzzle {
             int bColor = stickersByPiece[7][1];
             int lColor = stickersByPiece[7][2];
 
-            int uColor = FACES[dColor].oppositeFace().ordinal();
-            int fColor = FACES[bColor].oppositeFace().ordinal();
-            int rColor = FACES[lColor].oppositeFace().ordinal();
+            int uColor = Face.values()[dColor].oppositeFace().ordinal();
+            int fColor = Face.values()[bColor].oppositeFace().ordinal();
+            int rColor = Face.values()[lColor].oppositeFace().ordinal();
 
             int[] colorToVal = new int[8];
             colorToVal[uColor] = 0;
@@ -563,7 +546,7 @@ public class CubePuzzle extends Puzzle {
                 int[][] faceArr = image[face.ordinal()];
                 for (int[] faceState : faceArr) {
                     for (int piece : faceState) {
-                        state.append(FACES[piece].toString());
+                        state.append(Face.values()[piece].toString());
                     }
                 }
             }
@@ -582,17 +565,17 @@ public class CubePuzzle extends Puzzle {
 
         @Override
         public Map<? extends PuzzleState, String> getCanonicalMovesByState() {
-            Map<String, CubeState> succ = getScrambleSuccessors();
-            Map<PuzzleState, String> reversed = new HashMap<>(succ.size() * 4 / 3 + 1);
-            for (final var entry : succ.entrySet()) {
+            Map<PuzzleState, String> reversed = new HashMap<>();
+
+            for (Map.Entry<String, ? extends PuzzleState> entry : getScrambleSuccessors().entrySet()) {
                 reversed.put(entry.getValue(), entry.getKey());
             }
+
             return reversed;
         }
 
         private Map<String, CubeState> getSuccessorsWithinSlice(int maxSlice, boolean includeRedundant) {
-            int expected = (maxSlice + 1) * 6 * 3;
-            Map<String, CubeState> successors = new LinkedHashMap<>(expected * 4 / 3 + 1);
+            Map<String, CubeState> successors = new LinkedHashMap<>();
             for (int innerSlice = 0; innerSlice <= maxSlice; innerSlice++) {
                 for (Face face : Face.values()) {
                     boolean halfOfEvenCube = size % 2 == 0 && (innerSlice == (size / 2) - 1);
