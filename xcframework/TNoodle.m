@@ -23,14 +23,28 @@
   }
 }
 
-+ (OrgWorldcubeassociationTnoodleSvgliteSvg *)drawScramble:(TNoodlePuzzle)puzzle
-                                                  scramble:(NSString *)scramble
-                                               colorScheme:(id<JavaUtilMap>)colorScheme {
-  OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry *reg =
-    OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_fromOrdinal((OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_ORDINAL)puzzle);
++ (NSString *)drawScramble:(TNoodlePuzzle)puzzle
+                  scramble:(nullable NSString *)scramble
+               colorScheme:(nullable NSString *)colorScheme {
+  @try {
+    OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry *reg =
+      OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_fromOrdinal((OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_ORDINAL)puzzle);
 
-  OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = [reg getScrambler];
-  return [scrambler drawScrambleWithNSString:scramble withJavaUtilMap:colorScheme];
+    OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = [reg getScrambler];
+    id<JavaUtilMap> parsedColorScheme = [scrambler parseColorSchemeWithNSString:colorScheme];
+
+    if (colorScheme != nil && colorScheme.length > 0 && parsedColorScheme == nil) {
+      return @"<TNoodle error: invalid color scheme>";
+    }
+
+    OrgWorldcubeassociationTnoodleSvgliteSvg *svg =
+      [scrambler drawScrambleWithNSString:scramble withJavaUtilMap:parsedColorScheme];
+
+    return [svg description];
+  }
+  @catch (NSException *ex) {
+    return [NSString stringWithFormat:@"<TNoodle error: %@>", ex.reason ?: @"unknown"];
+  }
 }
 
 @end
