@@ -91,7 +91,8 @@ public class Element {
             String value = style.get(key);
             sb.append(" ").append(key).append(":").append(value).append(";");
         }
-        if (sb.isEmpty()) {
+        //noinspection SizeReplaceableByIsEmpty (because j2objc JavaLangStringBuilder does not implement that selector)
+        if (sb.length() == 0) {
             return "";
         }
         return sb.substring(1);
