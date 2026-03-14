@@ -72,7 +72,8 @@ public class Path extends Element {
         for (Command c : commands) {
             sb.append(" ").append(c.toString());
         }
-        if (sb.isEmpty()) {
+        //noinspection SizeReplaceableByIsEmpty (because j2objc JavaLangStringBuilder does not implement that selector)
+        if (sb.length() == 0) {
             return "";
         }
         return sb.substring(1);

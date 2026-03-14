@@ -253,7 +253,7 @@ public abstract class Puzzle implements Exportable {
      *
      * @throws InvalidScrambleException If scramble is invalid.
      */
-    public void drawScramble(String scramble, Map<String, Color> colorScheme) throws InvalidScrambleException {
+    public Svg drawScramble(String scramble, Map<String, Color> colorScheme) throws InvalidScrambleException {
         if (scramble == null) {
             scramble = "";
         }
@@ -278,6 +278,7 @@ public abstract class Puzzle implements Exportable {
         }
         g.translate(0.5, 0.5);
         svg.appendChild(g);
+        return svg;
     }
 
     public abstract Dimension getPreferredSize();

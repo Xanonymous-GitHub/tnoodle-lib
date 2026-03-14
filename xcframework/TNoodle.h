@@ -24,6 +24,10 @@ typedef NS_ENUM(int32_t, TNoodlePuzzle) {
 @interface TNoodle : NSObject
 
 + (NSString *)generateWcaScramble:(TNoodlePuzzle)puzzle seed:(int64_t)seed;
+// colorScheme follows Puzzle.parseColorScheme(), e.g. nil for defaults.
++ (NSString *)drawScramble:(TNoodlePuzzle)puzzle
+                  scramble:(nullable NSString *)scramble
+               colorScheme:(nullable NSString *)colorScheme;
 
 @end
 
