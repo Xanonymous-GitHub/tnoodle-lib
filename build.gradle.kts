@@ -1,22 +1,21 @@
 allprojects {
     group = "org.worldcubeassociation.tnoodle"
-    version = "0.19.2"
+    version = "0.20.0"
 }
 
 plugins {
-    alias(libs.plugins.dependency.versions)
     alias(libs.plugins.nexus.publish)
 }
 
 nexusPublishing {
     repositories {
         sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
         }
     }
 }
 
-tasks.create("generateDebugRelease") {
+tasks.register("generateDebugRelease") {
     dependsOn(":scrambles:shadowJar")
 }
