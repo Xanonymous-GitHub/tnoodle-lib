@@ -114,8 +114,8 @@ build/apple/TNoodle.xcframework
   - `TNoodlePuzzle` mirrors the Java `PuzzleRegistry` ordinals
   - every scramble reaches the same state as on the JVM, with exactly the same SVG elements
     (compared in any order: Megaminx paints its faces in a per-process hash order)
-  - the move sequence is identical too, wherever the official solver is deterministic for
-    a seed (Pyraminx and Skewb deliberately randomize among equally short solutions)
+  - the move sequence is identical too, except for the 3x3x3 family: its official solver keeps
+    searching for shorter solutions for a fixed wall-clock time, so the result depends on CPU speed
   - FTO scrambles use FTO notation, and the error sentinels behave as documented
 - Builds the tests for a physical device, proving the device slice links
 
