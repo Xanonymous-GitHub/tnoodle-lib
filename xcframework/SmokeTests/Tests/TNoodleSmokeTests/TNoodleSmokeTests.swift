@@ -32,8 +32,9 @@ private struct ReferenceRecord: Sendable {
     let ordinal: Int32
     let registryName: String
     let seed: Int64
-    /// Whether the JVM always produced the same move sequence for a seed; see the generator.
-    let sequenceIsDeterministic: Bool
+    /// Whether the move sequence, not just the state, is reproducible across platforms;
+    /// see `Fixtures/GenerateExpectedScrambles.java`.
+    let sequenceIsComparable: Bool
     let scramble: String
     let svg: String
 
@@ -63,7 +64,7 @@ private enum ReferenceData {
             ordinal: try #require(Int32(fields[0])),
             registryName: String(fields[1]),
             seed: try #require(Int64(fields[2])),
-            sequenceIsDeterministic: fields[3] == "1",
+            sequenceIsComparable: fields[3] == "1",
             scramble: try decodeBase64(fields[4]),
             svg: try decodeBase64(fields[5])
         )
@@ -105,10 +106,12 @@ struct TNoodleSmokeTests {
 
             // The image depends only on the scrambled state, so its elements must always match.
             let svg = TNoodle.drawScramble(puzzle, scramble: scramble, colorScheme: nil)
-            let imageMatches = svgElements(svg) == svgElements(record.svg)
-            #expect(imageMatches, "\(record.label): image differs from the JVM\n\(firstDifference(svg, record.svg))")
+            let actual = try #require(SVGStructure(svg), "\(record.label): not well-formed SVG")
+            let expected = try #require(SVGStructure(record.svg), "\(record.label): bad reference SVG")
+            let imageMatches = actual == expected
+            #expect(imageMatches, "\(record.label): image differs from the JVM\n\(actual.difference(from: expected))")
 
-            if record.sequenceIsDeterministic {
+            if record.sequenceIsComparable {
                 #expect(scramble == record.scramble, "\(record.label)")
             }
         }
@@ -151,29 +154,68 @@ struct TNoodleSmokeTests {
     }
 }
 
-/// An SVG's lines as a sorted multiset: every element must match exactly, in any order.
+/// An SVG reduced to what its image depends on: a sorted multiset of elements, each identified
+/// by its depth, name, attributes (sorted by name) and text. Every value must match exactly.
 ///
-/// svglite writes one element per line. Paint order is not stable across processes for every
-/// puzzle (MegaminxPuzzle draws its faces by iterating a `HashMap<Face, Path>`, and enum hash
-/// codes are identity-based), so comparing in order would fail at random even on two JVMs.
-/// The faces never overlap, so the rendered image is the same either way.
-private func svgElements(_ svg: String) -> [Substring] {
-    svg.split(separator: "\n", omittingEmptySubsequences: false).sorted()
-}
+/// Two orderings are deliberately ignored, because neither is stable across runtimes:
+/// - attribute order, which XML defines as insignificant; svglite keeps attributes in a
+///   `HashMap`, which the JVM and J2ObjC's emulated JRE iterate differently;
+/// - sibling order, which only affects paint order; MegaminxPuzzle draws its non-overlapping
+///   faces by iterating a `HashMap<Face, Path>`, whose order varies even between JVM runs.
+private struct SVGStructure: Equatable {
+    let elements: [String]
 
-/// A short excerpt around the first differing character, so mismatches stay readable.
-private func firstDifference(_ actual: String, _ expected: String) -> String {
-    let actualChars = Array(actual)
-    let expectedChars = Array(expected)
-    let index = zip(actualChars, expectedChars).enumerated()
-        .first { $0.element.0 != $0.element.1 }?.offset
-        ?? min(actualChars.count, expectedChars.count)
-
-    func excerpt(_ chars: [Character]) -> String {
-        let lower = max(0, index - 40)
-        let upper = min(chars.count, index + 40)
-        return String(chars[lower..<upper])
+    init?(_ svg: String) {
+        let collector = ElementCollector()
+        let parser = XMLParser(data: Data(svg.utf8))
+        parser.delegate = collector
+        guard parser.parse() else { return nil }
+        elements = collector.signatures.sorted()
     }
 
-    return "first difference at character \(index)\n  actual:   …\(excerpt(actualChars))…\n  expected: …\(excerpt(expectedChars))…"
+    /// The first element present on one side only, so mismatches stay readable.
+    func difference(from expected: SVGStructure) -> String {
+        let actualOnly = elements.first { !expected.elements.contains($0) } ?? "-"
+        let expectedOnly = expected.elements.first { !elements.contains($0) } ?? "-"
+        return """
+            \(elements.count) elements vs \(expected.elements.count) expected
+              only in actual:   \(actualOnly.prefix(240))
+              only in expected: \(expectedOnly.prefix(240))
+            """
+    }
+}
+
+private final class ElementCollector: NSObject, XMLParserDelegate {
+    private(set) var signatures: [String] = []
+    private var open: [(signature: String, text: String)] = []
+
+    func parser(
+        _ parser: XMLParser,
+        didStartElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName: String?,
+        attributes: [String: String]
+    ) {
+        let sortedAttributes = attributes
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: " ")
+        open.append(("\(open.count)|\(elementName)|\(sortedAttributes)", ""))
+    }
+
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        guard !open.isEmpty else { return }
+        open[open.count - 1].text += string
+    }
+
+    func parser(
+        _ parser: XMLParser,
+        didEndElement elementName: String,
+        namespaceURI: String?,
+        qualifiedName: String?
+    ) {
+        guard let element = open.popLast() else { return }
+        let text = element.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        signatures.append("\(element.signature)|\(text)")
+    }
 }
