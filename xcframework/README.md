@@ -198,6 +198,19 @@ Add these flags in your target's **Build Settings** → **Other Linker Flags**:
 -lz
 ```
 
+For a Swift package, declare them on the target that depends on the XCFramework.
+`-ObjC` must go through `-Xlinker`, because SwiftPM links Swift targets with `swiftc`,
+which rejects it otherwise (see `SmokeTests/Package.swift`):
+
+```swift
+linkerSettings: [
+    .unsafeFlags(["-Xlinker", "-ObjC"]),
+    .linkedLibrary("iconv"),
+    .linkedLibrary("z"),
+    .linkedFramework("Security"),
+]
+```
+
 ### Required Frameworks
 
 Link these frameworks in **Build Phases** → **Link Binary With Libraries**:

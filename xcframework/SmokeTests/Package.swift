@@ -21,7 +21,8 @@ let package = Package(
             dependencies: ["TNoodle"],
             linkerSettings: [
                 // J2ObjC's runtime registers Objective-C categories and loads classes reflectively.
-                .unsafeFlags(["-ObjC"]),
+                // Swift targets are linked through swiftc, which only forwards it via -Xlinker.
+                .unsafeFlags(["-Xlinker", "-ObjC"]),
                 .linkedLibrary("iconv"),
                 .linkedLibrary("z"),
                 .linkedFramework("Security"),
