@@ -157,11 +157,15 @@ struct TNoodleSmokeTests {
 /// An SVG reduced to what its image depends on: a sorted multiset of elements, each identified
 /// by its depth, name, attributes (sorted by name) and text. Every value must match exactly.
 ///
-/// Two orderings are deliberately ignored, because neither is stable across runtimes:
-/// - attribute order, which XML defines as insignificant; svglite keeps attributes in a
-///   `HashMap`, which the JVM and J2ObjC's emulated JRE iterate differently;
+/// Only differences that cannot change the rendered image are normalized away, because none of
+/// them is stable across runtimes:
+/// - attribute order, which XML defines as insignificant, and the order of CSS declarations in
+///   `style`; svglite keeps both in a `HashMap`, which the JVM and J2ObjC's emulated JRE iterate
+///   differently;
 /// - sibling order, which only affects paint order; MegaminxPuzzle draws its non-overlapping
-///   faces by iterating a `HashMap<Face, Path>`, whose order varies even between JVM runs.
+///   faces by iterating a `HashMap<Face, Path>`, whose order varies even between JVM runs;
+/// - floating-point noise below 1e-4 px: Java permits `Math.sin`/`cos` a 1 ulp error, and the
+///   JVM's intrinsics and Apple's libm (which J2ObjC calls) round the last digits differently.
 private struct SVGStructure: Equatable {
     let elements: [String]
 
@@ -189,6 +193,31 @@ private final class ElementCollector: NSObject, XMLParserDelegate {
     private(set) var signatures: [String] = []
     private var open: [(signature: String, text: String)] = []
 
+    /// Decimal numbers not part of an identifier or a `#rrggbb` color.
+    private let number = try! NSRegularExpression(pattern: #"(?<![#\w.])-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?"#)
+
+    private func normalized(_ value: String, attribute: String) -> String {
+        var value = value
+        if attribute == "style" {
+            value = value.split(separator: ";")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .sorted()
+                .joined(separator: "; ")
+        }
+
+        let source = value as NSString
+        var result = ""
+        var cursor = 0
+        for match in number.matches(in: value, range: NSRange(location: 0, length: source.length)) {
+            result += source.substring(with: NSRange(location: cursor, length: match.range.location - cursor))
+            let rounded = String(format: "%.4f", Double(source.substring(with: match.range)) ?? .nan)
+            result += rounded == "-0.0000" ? "0.0000" : rounded
+            cursor = match.range.location + match.range.length
+        }
+        return result + source.substring(from: cursor)
+    }
+
     func parser(
         _ parser: XMLParser,
         didStartElement elementName: String,
@@ -198,7 +227,7 @@ private final class ElementCollector: NSObject, XMLParserDelegate {
     ) {
         let sortedAttributes = attributes
             .sorted { $0.key < $1.key }
-            .map { "\($0.key)=\($0.value)" }
+            .map { "\($0.key)=\(normalized($0.value, attribute: $0.key))" }
             .joined(separator: " ")
         open.append(("\(open.count)|\(elementName)|\(sortedAttributes)", ""))
     }
