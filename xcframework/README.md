@@ -6,28 +6,38 @@ This guide describes how to build TNoodle as an iOS XCFramework using J2ObjC for
 
 ### Required Tools
 
-- **Java Development Kit (JDK)**: OpenJDK LTS version (tested with JDK 25)
-- **J2ObjC**: Google's Java-to-Objective-C transpiler
-- **Xcode Command Line Tools**: For `xcodebuild`, `clang`, and iOS SDKs
+- **JDK 25**: Builds the project with Gradle (`JAVA_HOME`)
+- **JDK 21**: Builds and runs J2ObjC, whose 3.1 launcher only accepts JDK 1.8 or 11-22 (`J2OBJC_JAVA_HOME`)
+- **J2ObjC 3.1**: Google's Java-to-Objective-C transpiler, built from source (see below)
+- **Xcode** (CI uses Xcode 27): For `xcodebuild`, `clang`, iOS SDKs and simulators
 - **macOS**: Required for Apple platform development
+- **jq**: Used by `test.bash` to pick a simulator
 
 ### J2ObjC Setup
 
-1. Clone the J2ObjC repository:
+The build is pinned to **J2ObjC 3.1**, the newest tag. Google labels it an interim
+pre-release, but 3.0.0 (the last release without that label) cannot translate the switch
+expressions, `yield` and pattern-matching `instanceof` used in this codebase. Neither version
+publishes prebuilt binaries, so J2ObjC is built from source.
+
+1. Clone the pinned tag:
    ```bash
-   git clone git@github.com:google/j2objc.git
+   git clone --depth 1 --branch 3.1 https://github.com/google/j2objc.git
    cd j2objc
    ```
 
-2. Build J2ObjC for iOS architectures:
+2. Build the translator and JRE emulation libraries for the two iOS slices, with JDK 21:
    ```bash
-   export J2OBJC_ARCHS="iphone64 simulator64"
-   make dist
+   export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+   export J2OBJC_ARCHS="iphone64 simulator64"   # arm64 device, arm64 simulator
+   make -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
    ```
 
-3. Set the `J2OBJC_HOME` environment variable:
+3. Point the scripts at the distribution and the JDK that runs it:
    ```bash
    export J2OBJC_HOME=/path/to/j2objc/dist
+   export J2OBJC_JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+   export JAVA_HOME="$(/usr/libexec/java_home -v 25)"   # back to JDK 25 for Gradle
    ```
 
 ## Build Process
@@ -53,7 +63,8 @@ Run the preparation script to translate Java sources to Objective-C:
 **What this does:**
 
 - Extracts the project classpath from Gradle
-- Filters out third-party dependencies (GWT Exporter, SLF4J)
+- Keeps only third-party jars on the translation classpath, minus GWT Exporter and SLF4J
+  (the project's own modules are translated from source)
 - Creates a working copy of source files
 - Strips GWT-specific annotations and logging code
 - Translates Java sources to Objective-C using J2ObjC
@@ -83,6 +94,35 @@ The completed XCFramework will be located at:
 ```
 build/apple/TNoodle.xcframework
 ```
+
+### 5. Test
+
+```bash
+./xcframework/test.bash
+```
+
+**What this does:**
+
+- Generates reference scrambles and images on the JVM
+  (`SmokeTests/Fixtures/GenerateExpectedScrambles.java`) for every puzzle and several seeds
+- Runs the Swift tests in `SmokeTests/` on an iOS simulator against the built XCFramework,
+  linked the same way an app links it. They check that:
+  - `TNoodlePuzzle` mirrors the Java `PuzzleRegistry` ordinals
+  - every scramble reaches the same state as on the JVM, with a byte-identical SVG image
+  - the move sequence is identical too, wherever the official solver is deterministic for
+    a seed (Pyraminx and Skewb deliberately randomize among equally short solutions)
+  - FTO scrambles use FTO notation, and the error sentinels behave as documented
+- Builds the tests for a physical device, proving the device slice links
+
+`TNOODLE_SIMULATOR_UDID` selects a specific simulator; by default an iPhone on the newest
+iOS runtime is used.
+
+## Continuous Integration
+
+`.github/workflows/xcframework.yml` runs all of the above on every push and pull request
+to `master` and `dev`, on the GitHub-hosted `xcode-27` runner. It builds J2ObjC from
+source once and caches the result per J2ObjC version, architecture set and Xcode build,
+and uploads the XCFramework (and, on failure, the `.xcresult` bundle) as artifacts.
 
 ## Build Configuration
 
@@ -197,8 +237,15 @@ export J2OBJC_HOME=/path/to/j2objc/dist
 ```bash
 export J2OBJC_ARCHS="iphone64 simulator64"
 cd /path/to/j2objc
-make dist
+make -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
 ```
+
+### Unsupported JDK
+
+**Error:** `JDK not supported. Please set JAVA_HOME to JDK 11 or higher.`
+
+**Solution:** The J2ObjC 3.1 launcher only accepts JDK 1.8 or 11-22. Point `J2OBJC_JAVA_HOME`
+at JDK 21; `JAVA_HOME` can stay on JDK 25 for Gradle.
 
 ### Architecture Mismatch
 
@@ -220,7 +267,9 @@ build/apple/
 ├── Headers/                 # Public API headers
 │   ├── TNoodle.h
 │   └── module.modulemap
-└── TNoodle.xcframework/     # Final output
+├── TNoodle.xcframework/     # Final output
+├── expected-scrambles.tsv   # JVM reference written by test.bash
+└── SmokeTests.xcresult      # Test results written by test.bash
 ```
 
 ## Clean Build
