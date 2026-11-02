@@ -26,6 +26,8 @@ let package = Package(
                 .linkedLibrary("iconv"),
                 .linkedLibrary("z"),
                 .linkedFramework("Security"),
+                // J2ObjC's java.lang.System reads the OS version from UIDevice.
+                .linkedFramework("UIKit"),
             ]
         ),
     ]

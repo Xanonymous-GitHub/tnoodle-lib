@@ -208,6 +208,7 @@ linkerSettings: [
     .linkedLibrary("iconv"),
     .linkedLibrary("z"),
     .linkedFramework("Security"),
+    .linkedFramework("UIKit"),
 ]
 ```
 
@@ -217,7 +218,11 @@ Link these frameworks in **Build Phases** → **Link Binary With Libraries**:
 
 ```
 Security.framework
+UIKit.framework
 ```
+
+`UIKit` is required because J2ObjC's `java.lang.System` reads the OS version from `UIDevice`.
+App targets usually link it already; test bundles and Swift packages must add it explicitly.
 
 ## Architecture Support
 
