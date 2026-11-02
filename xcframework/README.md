@@ -30,6 +30,10 @@ publishes prebuilt binaries, so J2ObjC is built from source.
    ```bash
    export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
    export J2OBJC_ARCHS="iphone64 simulator64"   # arm64 device, arm64 simulator
+   # Needed with Xcode 27: J2ObjC builds with -Werror, and newer clang flags a faithful
+   # translation of Java's int-to-float conversion in Hashtable. Must be an environment
+   # variable; passing WARNINGS on the make command line would drop J2ObjC's -Wall -Werror.
+   export WARNINGS="-Wno-implicit-const-int-float-conversion"
    make -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
    ```
 

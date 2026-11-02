@@ -74,10 +74,16 @@ jobs:
       if: steps.j2objc-cache.outputs.cache-hit != 'true'
       env:
         JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+        # Appended to J2ObjC's own -Wall -Werror set (jre_emul/environment.mk). It must come from
+        # the environment: a make command-line WARNINGS would replace that set instead.
+        # Xcode 27's clang flags the faithful translation of Java's int-to-float conversion in
+        # Hashtable's `Math.min(capacity * loadFactor, MAX_ARRAY_SIZE + 1)`.
+        WARNINGS: -Wno-implicit-const-int-float-conversion
       run: |
         src="$RUNNER_TEMP/j2objc-src"
         git clone --depth 1 --branch "$J2OBJC_VERSION" https://github.com/google/j2objc.git "$src"
-        make -C "$src" -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
+        # -k: on failure, report every broken file in one run rather than stopping at the first.
+        make -C "$src" -k -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
         rm -rf "$J2OBJC_HOME"
         cp -R "$src/dist" "$J2OBJC_HOME"
 
