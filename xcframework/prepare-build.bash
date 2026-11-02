@@ -35,7 +35,7 @@ WORKSRC="$OUT/worksrc"
 rm -rf "$WORKSRC"
 mkdir -p "$WORKSRC"
 
-for m in scrambles svglite threephase min2phase sq12phase; do
+for m in scrambles svglite threephase min2phase sq12phase fto3phase; do
   mkdir -p "$WORKSRC/$m/src/main/java"
   rsync -a "$m/src/main/java/" "$WORKSRC/$m/src/main/java/"
 done
