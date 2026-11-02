@@ -292,12 +292,19 @@ public class CubieCube {
                 } else {
                     CornConjugate(c, s, d);
                 }
-                idx = switch (coord) {
-                    case 0 -> d.getFlip();
-                    case 1 -> d.getTwist();
-                    case 2 -> d.getEPerm();
-                    default -> idx;
-                };
+                // A statement, not a switch expression: J2ObjC 3.1 crashes translating a switch
+                // expression assigned to a variable it also reads (`default -> idx`).
+                switch (coord) {
+                    case 0:
+                        idx = d.getFlip();
+                        break;
+                    case 1:
+                        idx = d.getTwist();
+                        break;
+                    case 2:
+                        idx = d.getEPerm();
+                        break;
+                }
                 if (coord == 0 && Search.USE_TWIST_FLIP_PRUN) {
                     FlipS2RF[count << 3 | s >> 1] = (char) idx;
                 }
