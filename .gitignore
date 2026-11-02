@@ -22,3 +22,8 @@ tnoodle_pruning_cache/
 version.tnoodle
 gradle.properties
 **/*.gpg
+
+# XCFramework smoke tests (xcframework/test.bash stages the framework here)
+xcframework/SmokeTests/Artifacts/
+xcframework/SmokeTests/.build/
+xcframework/SmokeTests/.swiftpm/
