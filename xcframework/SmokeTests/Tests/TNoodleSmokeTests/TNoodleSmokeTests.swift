@@ -165,7 +165,8 @@ private func svgElements(_ svg: String) -> [Substring] {
 private func firstDifference(_ actual: String, _ expected: String) -> String {
     let actualChars = Array(actual)
     let expectedChars = Array(expected)
-    let index = zip(actualChars, expectedChars).firstIndex { $0 != $1 }
+    let index = zip(actualChars, expectedChars).enumerated()
+        .first { $0.element.0 != $0.element.1 }?.offset
         ?? min(actualChars.count, expectedChars.count)
 
     func excerpt(_ chars: [Character]) -> String {
