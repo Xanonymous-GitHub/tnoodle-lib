@@ -28,13 +28,9 @@ dependencies {
     implementation(project(":min2phase"))
     implementation(project(":threephase"))
     implementation(project(":sq12phase"))
+    implementation(project(":fto3phase"))
 
     api(libs.gwt.exporter)
-
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.engine)
-
-    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 configureJUnit5()

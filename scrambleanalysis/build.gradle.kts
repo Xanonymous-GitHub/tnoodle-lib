@@ -17,11 +17,6 @@ dependencies {
     implementation(project(":scrambles"))
     implementation(project(":min2phase"))
     implementation(libs.apache.commons.math3)
-
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.engine)
-
-    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 configureJUnit5()
