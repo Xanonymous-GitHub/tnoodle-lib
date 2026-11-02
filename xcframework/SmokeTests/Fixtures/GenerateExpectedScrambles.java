@@ -2,6 +2,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Random;
 
+import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
 
@@ -15,13 +16,21 @@ import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
  * <p>A seed always determines the scrambled <em>state</em>, so the SVG of that state must contain
  * exactly the same elements on every platform. Their paint order may differ between processes
  * (Megaminx iterates a {@code HashMap} keyed by an enum), so consumers compare elements in any
- * order. A seed does not always determine the <em>move sequence</em> either:
- * some official solvers (Pyraminx, Skewb) pick among equally short solutions with their own
- * unseeded {@code Random}. Each puzzle is therefore generated {@value #RUNS_PER_SEED} times per
- * seed, and the move sequence is only marked comparable when every run agreed for every seed.
+ * order. A seed does not always determine the <em>move sequence</em>, for two reasons in the
+ * official solvers:
+ * <ul>
+ *   <li>Pyraminx and Skewb pick among equally short solutions with their own unseeded
+ *       {@code Random}. Each puzzle is generated {@value #RUNS_PER_SEED} times per seed to catch
+ *       this.</li>
+ *   <li>The 3x3x3 family ({@link ThreeByThreeCubePuzzle} and its subclasses) searches with
+ *       min2phase's {@code SearchWCA}, which keeps looking for shorter solutions for a fixed
+ *       wall-clock time. The result depends on CPU speed, so it can differ on another machine
+ *       or platform even though it never varies between runs on one machine.</li>
+ * </ul>
+ * The move sequence is only marked comparable when neither applies.
  *
  * <p>Output is one tab-separated record per line:
- * {@code ordinal, registryName, seed, sequenceIsDeterministic (0|1), base64(scramble), base64(svg)}.
+ * {@code ordinal, registryName, seed, sequenceIsComparable (0|1), base64(scramble), base64(svg)}.
  * Base64 keeps SVG markup free of tabs and newlines without needing a JSON library.
  *
  * <p>Run as a single-file program on the JDK the library targets:
@@ -44,7 +53,8 @@ public final class GenerateExpectedScrambles {
             Puzzle puzzle = entry.getScrambler();
             String[] scrambles = new String[SEEDS.length];
             String[] svgs = new String[SEEDS.length];
-            boolean sequenceIsDeterministic = true;
+            // Wall-clock bounded: runs on this machine agree, yet another platform may not.
+            boolean sequenceIsComparable = !(puzzle instanceof ThreeByThreeCubePuzzle);
 
             for (int i = 0; i < SEEDS.length; i++) {
                 scrambles[i] = puzzle.generateWcaScramble(new Random(SEEDS[i]));
@@ -57,7 +67,7 @@ public final class GenerateExpectedScrambles {
                         throw new IllegalStateException(
                             entry.name() + ": seed " + SEEDS[i] + " produced different states across runs");
                     }
-                    sequenceIsDeterministic &= again.equals(scrambles[i]);
+                    sequenceIsComparable &= again.equals(scrambles[i]);
                 }
             }
 
@@ -65,7 +75,7 @@ public final class GenerateExpectedScrambles {
                 out.append(entry.ordinal()).append('\t')
                     .append(entry.name()).append('\t')
                     .append(SEEDS[i]).append('\t')
-                    .append(sequenceIsDeterministic ? '1' : '0').append('\t')
+                    .append(sequenceIsComparable ? '1' : '0').append('\t')
                     .append(base64.encodeToString(scrambles[i].getBytes(StandardCharsets.UTF_8))).append('\t')
                     .append(base64.encodeToString(svgs[i].getBytes(StandardCharsets.UTF_8))).append('\n');
             }
