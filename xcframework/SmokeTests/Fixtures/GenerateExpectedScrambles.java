@@ -12,8 +12,10 @@ import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
  * does on Apple platforms: {@code generateWcaScramble(new Random(seed))} followed by
  * {@code drawScramble(scramble, parseColorScheme(null))}.
  *
- * <p>A seed always determines the scrambled <em>state</em>, so the SVG of that state must match
- * byte for byte on every platform. It does not always determine the <em>move sequence</em>:
+ * <p>A seed always determines the scrambled <em>state</em>, so the SVG of that state must contain
+ * exactly the same elements on every platform. Their paint order may differ between processes
+ * (Megaminx iterates a {@code HashMap} keyed by an enum), so consumers compare elements in any
+ * order. A seed does not always determine the <em>move sequence</em> either:
  * some official solvers (Pyraminx, Skewb) pick among equally short solutions with their own
  * unseeded {@code Random}. Each puzzle is therefore generated {@value #RUNS_PER_SEED} times per
  * seed, and the move sequence is only marked comparable when every run agreed for every seed.

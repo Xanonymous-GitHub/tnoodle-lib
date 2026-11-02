@@ -103,9 +103,9 @@ struct TNoodleSmokeTests {
                 continue
             }
 
-            // The image depends only on the scrambled state, so it must always match.
+            // The image depends only on the scrambled state, so its elements must always match.
             let svg = TNoodle.drawScramble(puzzle, scramble: scramble, colorScheme: nil)
-            let imageMatches = svg == record.svg
+            let imageMatches = svgElements(svg) == svgElements(record.svg)
             #expect(imageMatches, "\(record.label): image differs from the JVM\n\(firstDifference(svg, record.svg))")
 
             if record.sequenceIsDeterministic {
@@ -149,6 +149,16 @@ struct TNoodleSmokeTests {
 
         #expect(image == "<TNoodle error: invalid color scheme>")
     }
+}
+
+/// An SVG's lines as a sorted multiset: every element must match exactly, in any order.
+///
+/// svglite writes one element per line. Paint order is not stable across processes for every
+/// puzzle (MegaminxPuzzle draws its faces by iterating a `HashMap<Face, Path>`, and enum hash
+/// codes are identity-based), so comparing in order would fail at random even on two JVMs.
+/// The faces never overlap, so the rendered image is the same either way.
+private func svgElements(_ svg: String) -> [Substring] {
+    svg.split(separator: "\n", omittingEmptySubsequences: false).sorted()
 }
 
 /// A short excerpt around the first differing character, so mismatches stay readable.

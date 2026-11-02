@@ -112,7 +112,8 @@ build/apple/TNoodle.xcframework
 - Runs the Swift tests in `SmokeTests/` on an iOS simulator against the built XCFramework,
   linked the same way an app links it. They check that:
   - `TNoodlePuzzle` mirrors the Java `PuzzleRegistry` ordinals
-  - every scramble reaches the same state as on the JVM, with a byte-identical SVG image
+  - every scramble reaches the same state as on the JVM, with exactly the same SVG elements
+    (compared in any order: Megaminx paints its faces in a per-process hash order)
   - the move sequence is identical too, wherever the official solver is deterministic for
     a seed (Pyraminx and Skewb deliberately randomize among equally short solutions)
   - FTO scrambles use FTO notation, and the error sentinels behave as documented
