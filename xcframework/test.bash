@@ -36,9 +36,15 @@ command -v jq >/dev/null || die "jq is required to pick a simulator and scheme."
 JAVA="${JAVA_HOME:+$JAVA_HOME/bin/}java"
 
 # ---- 1. JVM reference ----
-# The unfiltered runtime classpath: unlike translation, the reference needs every jar.
+# :scrambles' own output (built by prepare-build.bash via `showClassPath`) plus its unfiltered
+# runtime classpath, which lists only its dependencies; the reference needs every one of them.
+SCRAMBLES_CLASSES="$PWD/scrambles/build/classes/java/main"
+SCRAMBLES_RESOURCES="$PWD/scrambles/build/resources/main"
+[[ -d "$SCRAMBLES_CLASSES" ]] || die "Missing $SCRAMBLES_CLASSES; run xcframework/prepare-build.bash first."
+REFERENCE_CLASSPATH="$SCRAMBLES_CLASSES:$SCRAMBLES_RESOURCES:$(paste -sd ':' "$CLASSPATH_FILE")"
+
 echo "[test] Generating JVM reference data with $("$JAVA" -version 2>&1 | head -n 1)"
-"$JAVA" -cp "$(paste -sd ':' "$CLASSPATH_FILE")" \
+"$JAVA" -cp "$REFERENCE_CLASSPATH" \
   "$PACKAGE_DIR/Fixtures/GenerateExpectedScrambles.java" > "$REFERENCE"
 echo "[test] Wrote $(wc -l < "$REFERENCE" | tr -d ' ') reference records to $REFERENCE"
 
