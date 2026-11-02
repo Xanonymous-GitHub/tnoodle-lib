@@ -3,24 +3,29 @@
 set -euo pipefail
 : "${J2OBJC_HOME:?Please export J2OBJC_HOME=/path/to/j2objc/dist}"
 
-# J2ObjC's public distribution historically supports JDK 8/11. Ensure a compatible JAVA_HOME.
-# (The j2objc launcher script itself enforces this on many versions.)
-if [[ -n "${JAVA_HOME:-}" ]]; then
-  echo "JAVA_HOME=$JAVA_HOME"
-fi
+# Gradle and the j2objc launcher need different JDKs: the build targets Java 25, while the
+# j2objc launcher only accepts the JDKs its release supports (J2ObjC 3.1: 1.8, 11-22).
+# JAVA_HOME drives Gradle; J2OBJC_JAVA_HOME (default: JAVA_HOME) drives the translator.
+J2OBJC_JAVA_HOME="${J2OBJC_JAVA_HOME:-${JAVA_HOME:-}}"
+echo "JAVA_HOME=${JAVA_HOME:-<unset>}"
+echo "J2OBJC_JAVA_HOME=${J2OBJC_JAVA_HOME:-<unset>}"
 
 mkdir -p build
 ./gradlew -q showClassPath >| build/apple-classpath.txt
 
-# For iOS/macOS native build we intentionally do NOT translate third-party libs
-# If third-party libs stays on the classpath, it will drag in third-party libs-only sources and break translation.
-grep -v \
--e '/gwtexporter-' \
--e '/slf4j-' \
-build/apple-classpath.txt > build/apple-classpath.filtered.txt
+# Keep only third-party jars on the translation classpath, minus the ones we never translate:
+# - this project's own module jars are translated from source (see WORKSRC below); their Java 25
+#   class files are also unreadable by the older JDK the translator runs on;
+# - GWT Exporter / SLF4J would drag their library-only sources into the translation.
+awk -v project_root="$PWD/" '
+  index($0, project_root) == 1 { next }
+  /\/gwtexporter-/ || /\/slf4j-/ { next }
+  { print }
+' build/apple-classpath.txt > build/apple-classpath.filtered.txt
 
 CLASSPATH="$(paste -sd ':' build/apple-classpath.filtered.txt)"
-echo "$CLASSPATH" | tr ':' '\n' | head
+echo "Translation classpath:"
+echo "${CLASSPATH:-<empty>}" | tr ':' '\n'
 
 OUT="$PWD/build/apple"
 OBJCDIR="$OUT/objc"
@@ -93,9 +98,12 @@ J2OBJC_STRIP_GWT_INCOMPATIBLE="${J2OBJC_STRIP_GWT_INCOMPATIBLE:-1}"
 j2objc_args=(
   -use-arc
   -sourcepath "$SOURCEPATH"
-  -classpath "$CLASSPATH"
   -d "$OBJCDIR"
 )
+
+if [[ -n "$CLASSPATH" ]]; then
+  j2objc_args+=(-classpath "$CLASSPATH")
+fi
 
 if [[ "$J2OBJC_STRIP_GWT_INCOMPATIBLE" == "1" ]]; then
   j2objc_args+=(--strip-gwt-incompatible)
@@ -113,4 +121,4 @@ if [[ -n "$J2OBJC_DEAD_CODE_REPORT" ]]; then
   j2objc_args+=(--dead-code-report "$J2OBJC_DEAD_CODE_REPORT")
 fi
 
-"$J2OBJC_HOME/j2objc" "${j2objc_args[@]}" @"$OUT/sources.txt"
+JAVA_HOME="$J2OBJC_JAVA_HOME" "$J2OBJC_HOME/j2objc" "${j2objc_args[@]}" @"$OUT/sources.txt"
