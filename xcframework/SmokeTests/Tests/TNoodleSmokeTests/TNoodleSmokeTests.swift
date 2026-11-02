@@ -35,6 +35,8 @@ private struct ReferenceRecord: Sendable {
     /// Whether the move sequence, not just the state, is reproducible across platforms;
     /// see `Fixtures/GenerateExpectedScrambles.java`.
     let sequenceIsComparable: Bool
+    /// Whether sibling paint order is stable across processes (all but Megaminx).
+    let paintOrderIsStable: Bool
     let scramble: String
     let svg: String
 
@@ -58,15 +60,16 @@ private enum ReferenceData {
 
     private static func parse(_ line: Substring) throws -> ReferenceRecord {
         let fields = line.split(separator: "\t", omittingEmptySubsequences: false)
-        try #require(fields.count == 6, "Malformed reference line: \(line.prefix(80))")
+        try #require(fields.count == 7, "Malformed reference line: \(line.prefix(80))")
 
         return ReferenceRecord(
             ordinal: try #require(Int32(fields[0])),
             registryName: String(fields[1]),
             seed: try #require(Int64(fields[2])),
             sequenceIsComparable: fields[3] == "1",
-            scramble: try decodeBase64(fields[4]),
-            svg: try decodeBase64(fields[5])
+            paintOrderIsStable: fields[4] == "1",
+            scramble: try decodeBase64(fields[5]),
+            svg: try decodeBase64(fields[6])
         )
     }
 
@@ -106,8 +109,12 @@ struct TNoodleSmokeTests {
 
             // The image depends only on the scrambled state, so its elements must always match.
             let svg = TNoodle.drawScramble(puzzle, scramble: scramble, colorScheme: nil)
-            let actual = try #require(SVGStructure(svg), "\(record.label): not well-formed SVG")
-            let expected = try #require(SVGStructure(record.svg), "\(record.label): bad reference SVG")
+            let ordered = record.paintOrderIsStable
+            let actual = try #require(SVGStructure(svg, preservingOrder: ordered), "\(record.label): not well-formed SVG")
+            let expected = try #require(
+                SVGStructure(record.svg, preservingOrder: ordered),
+                "\(record.label): bad reference SVG"
+            )
             let imageMatches = actual == expected
             #expect(imageMatches, "\(record.label): image differs from the JVM\n\(actual.difference(from: expected))")
 
@@ -154,7 +161,7 @@ struct TNoodleSmokeTests {
     }
 }
 
-/// An SVG reduced to what its image depends on: a sorted multiset of elements, each identified
+/// An SVG reduced to what its image depends on: its elements in paint order, each identified
 /// by its depth, name, attributes (sorted by name) and text. Every value must match exactly.
 ///
 /// Only differences that cannot change the rendered image are normalized away, because none of
@@ -162,29 +169,37 @@ struct TNoodleSmokeTests {
 /// - attribute order, which XML defines as insignificant, and the order of CSS declarations in
 ///   `style`; svglite keeps both in a `HashMap`, which the JVM and J2ObjC's emulated JRE iterate
 ///   differently;
-/// - sibling order, which only affects paint order; MegaminxPuzzle draws its non-overlapping
-///   faces by iterating a `HashMap<Face, Path>`, whose order varies even between JVM runs;
+/// - paint order, but only where the reference marks it unstable: MegaminxPuzzle draws its
+///   non-overlapping faces by iterating a `HashMap<Face, Path>`, whose order varies even between
+///   JVM runs. Everywhere else it matters (Clock's hands and pins overlap) and is compared;
 /// - floating-point noise below 1e-4 px: Java permits `Math.sin`/`cos` a 1 ulp error, and the
 ///   JVM's intrinsics and Apple's libm (which J2ObjC calls) round the last digits differently.
 private struct SVGStructure: Equatable {
     let elements: [String]
 
-    init?(_ svg: String) {
+    init?(_ svg: String, preservingOrder: Bool) {
         let collector = ElementCollector()
         let parser = XMLParser(data: Data(svg.utf8))
         parser.delegate = collector
         guard parser.parse() else { return nil }
-        elements = collector.signatures.sorted()
+        elements = preservingOrder ? collector.signatures : collector.signatures.sorted()
     }
 
-    /// The first element present on one side only, so mismatches stay readable.
+    /// The first differing position, so mismatches stay readable; also says whether the two
+    /// sides hold the same elements in a different order.
     func difference(from expected: SVGStructure) -> String {
-        let actualOnly = elements.first { !expected.elements.contains($0) } ?? "-"
-        let expectedOnly = expected.elements.first { !elements.contains($0) } ?? "-"
+        let index = zip(elements, expected.elements).enumerated()
+            .first { $0.element.0 != $0.element.1 }?.offset
+            ?? min(elements.count, expected.elements.count)
+        let sameElements = elements.sorted() == expected.elements.sorted()
+        func element(_ list: [String]) -> Substring {
+            index < list.count ? list[index].prefix(240) : "<none>"
+        }
         return """
-            \(elements.count) elements vs \(expected.elements.count) expected
-              only in actual:   \(actualOnly.prefix(240))
-              only in expected: \(expectedOnly.prefix(240))
+            \(elements.count) elements vs \(expected.elements.count) expected\(sameElements ? " (same elements, different order)" : "")
+              first difference at element \(index)
+              actual:   \(element(elements))
+              expected: \(element(expected.elements))
             """
     }
 }

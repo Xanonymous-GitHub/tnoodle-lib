@@ -2,6 +2,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Random;
 
+import org.worldcubeassociation.tnoodle.puzzle.MegaminxPuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.ThreeByThreeCubePuzzle;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
@@ -14,22 +15,20 @@ import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
  * {@code drawScramble(scramble, parseColorScheme(null))}.
  *
  * <p>A seed always determines the scrambled <em>state</em>, so the SVG of that state must contain
- * exactly the same elements on every platform. Their paint order may differ between processes
- * (Megaminx iterates a {@code HashMap} keyed by an enum), so consumers compare elements in any
- * order. A seed does not always determine the <em>move sequence</em>, though:
- * <ul>
- *   <li>The 3x3x3 family ({@link ThreeByThreeCubePuzzle} and its subclasses) searches with
- *       min2phase's {@code SearchWCA}, which keeps looking for shorter solutions for a fixed
- *       wall-clock time. The result depends on CPU speed, so it can differ on another machine
- *       or platform even though it never varies between runs on one machine.</li>
- *   <li>A solver that randomizes without using the seed would make it vary from run to run.
- *       None does today, but each puzzle is generated {@value #RUNS_PER_SEED} times per seed so
- *       that one would be caught rather than produce a flaky comparison.</li>
- * </ul>
- * The move sequence is only marked comparable when neither applies.
+ * exactly the same elements on every platform, in the same paint order, except for
+ * {@link MegaminxPuzzle}: it paints its non-overlapping faces by iterating a {@code HashMap}
+ * keyed by an enum, whose order varies even between JVM processes.
  *
- * <p>Output is one tab-separated record per line:
- * {@code ordinal, registryName, seed, sequenceIsComparable (0|1), base64(scramble), base64(svg)}.
+ * <p>A seed determines the <em>move sequence</em> too, except for the 3x3x3 family
+ * ({@link ThreeByThreeCubePuzzle} and its subclasses). It searches with min2phase's
+ * {@code SearchWCA}, which keeps looking for shorter solutions for a fixed wall-clock time, so
+ * the result depends on CPU speed and can differ on another machine or platform even though it
+ * never varies between runs on one machine. Every other puzzle is generated
+ * {@value #RUNS_PER_SEED} times per seed, and generation fails if any run disagrees: a solver
+ * that stopped being reproducible must break the build, not quietly weaken the comparison.
+ *
+ * <p>Output is one tab-separated record per line: {@code ordinal, registryName, seed,
+ * sequenceIsComparable (0|1), paintOrderIsStable (0|1), base64(scramble), base64(svg)}.
  * Base64 keeps SVG markup free of tabs and newlines without needing a JSON library.
  *
  * <p>Run as a single-file program on the JDK the library targets:
@@ -54,6 +53,7 @@ public final class GenerateExpectedScrambles {
             String[] svgs = new String[SEEDS.length];
             // Wall-clock bounded: runs on this machine agree, yet another platform may not.
             boolean sequenceIsComparable = !(puzzle instanceof ThreeByThreeCubePuzzle);
+            boolean paintOrderIsStable = !(puzzle instanceof MegaminxPuzzle);
 
             for (int i = 0; i < SEEDS.length; i++) {
                 scrambles[i] = puzzle.generateWcaScramble(new Random(SEEDS[i]));
@@ -66,7 +66,10 @@ public final class GenerateExpectedScrambles {
                         throw new IllegalStateException(
                             entry.name() + ": seed " + SEEDS[i] + " produced different states across runs");
                     }
-                    sequenceIsComparable &= again.equals(scrambles[i]);
+                    if (sequenceIsComparable && !again.equals(scrambles[i])) {
+                        throw new IllegalStateException(
+                            entry.name() + ": seed " + SEEDS[i] + " produced different move sequences across runs");
+                    }
                 }
             }
 
@@ -75,6 +78,7 @@ public final class GenerateExpectedScrambles {
                     .append(entry.name()).append('\t')
                     .append(SEEDS[i]).append('\t')
                     .append(sequenceIsComparable ? '1' : '0').append('\t')
+                    .append(paintOrderIsStable ? '1' : '0').append('\t')
                     .append(base64.encodeToString(scrambles[i].getBytes(StandardCharsets.UTF_8))).append('\t')
                     .append(base64.encodeToString(svgs[i].getBytes(StandardCharsets.UTF_8))).append('\n');
             }
