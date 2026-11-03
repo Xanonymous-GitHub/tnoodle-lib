@@ -414,7 +414,12 @@ public class PyraminxSolver {
     }
 
     private String solve(PyraminxSolverState state, int desiredLength, boolean exactLength, boolean inverse, boolean includingTips) {
-        Random r = new Random();
+        // Seeded by the state, never by the caller's Random: tie-breaking among equally short
+        // solutions stays random-looking, but a seed now yields a reproducible sequence on every
+        // platform, and the caller's Random is left untouched, so each seed still produces
+        // exactly the same random states as before.
+        long stateIndex = ((long) state.edgePerm * N_EDGE_ORIENT + state.edgeOrient) * N_CORNER_ORIENT + state.cornerOrient;
+        Random r = new Random(stateIndex * N_TIPS + state.tips);
         int[] solution = new int[MAX_LENGTH];
         boolean foundSolution = false;
 

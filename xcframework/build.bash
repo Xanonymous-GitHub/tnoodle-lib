@@ -266,3 +266,4 @@ echo "       -ObjC                     (may be needed when classes are loaded dy
 echo "       -liconv                   (required when using J2ObjC JRE charset/iconv)"
 echo "       -lz                       (needed if java.util.zip is used)"
 echo "       -framework Security       (required if any embedded runtime/lib uses jre_security)"
+echo "       -framework UIKit          (required: jre_core's java.lang.System uses UIDevice)"

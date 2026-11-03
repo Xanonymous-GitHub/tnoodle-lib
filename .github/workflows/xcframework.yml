@@ -1,0 +1,136 @@
+# Translates the scramble program with J2ObjC, builds TNoodle.xcframework and tests it on an
+# iOS simulator against JVM reference output. See xcframework/README.md for the local workflow.
+
+name: XCFramework
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Newest J2ObjC tag. Google flags 3.1 as an interim pre-release, but 3.0.0 cannot translate
+  # the switch expressions, `yield` and pattern-matching `instanceof` used in this codebase.
+  J2OBJC_VERSION: '3.1'
+  # arm64 device + arm64 simulator, the two slices xcframework/build.bash packages.
+  J2OBJC_ARCHS: 'iphone64 simulator64'
+  J2OBJC_RUNTIME_LIBS: 'jre_core jre_security jre_util jre_net'
+
+jobs:
+  xcframework:
+    name: J2ObjC + XCFramework + iOS tests
+    runs-on: xcode-27
+    # A cold J2ObjC build dominates; cached runs take a fraction of this.
+    timeout-minutes: 180
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Describe toolchain
+      id: toolchain
+      run: |
+        xcodebuild -version
+        xcrun simctl list runtimes available
+        xcode="$(xcodebuild -version | awk '/^Xcode/ { v = $2 } /Build version/ { b = $3 } END { print v "-" b }')"
+        archs="${J2OBJC_ARCHS// /-}"
+        echo "j2objc-cache-key=j2objc-${J2OBJC_VERSION}-${archs}-${RUNNER_OS}-${RUNNER_ARCH}-xcode-${xcode}" >> "$GITHUB_OUTPUT"
+        echo "J2OBJC_HOME=$RUNNER_TEMP/j2objc-dist" >> "$GITHUB_ENV"
+
+    # J2ObjC 3.1 builds and runs on JDK 1.8 or 11-22 only.
+    - name: Set up JDK 21 (J2ObjC)
+      id: jdk21
+      uses: actions/setup-java@v6
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    # Set up last so JAVA_HOME points at it: Gradle and the JVM reference run on JDK 25,
+    # matching the Linux build.
+    - name: Set up JDK 25 (Gradle)
+      uses: actions/setup-java@v6
+      with:
+        java-version: '25'
+        distribution: 'graalvm'
+
+    - uses: gradle/actions/setup-gradle@v6
+
+    - name: Restore J2ObjC ${{ env.J2OBJC_VERSION }}
+      id: j2objc-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ env.J2OBJC_HOME }}
+        key: ${{ steps.toolchain.outputs.j2objc-cache-key }}
+
+    - name: Build J2ObjC ${{ env.J2OBJC_VERSION }} from source
+      if: steps.j2objc-cache.outputs.cache-hit != 'true'
+      env:
+        JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+        # Appended to J2ObjC's own -Wall -Werror set (jre_emul/environment.mk). It must come from
+        # the environment: a make command-line WARNINGS would replace that set instead.
+        # Xcode 27's clang flags the faithful translation of Java's int-to-float conversion in
+        # Hashtable's `Math.min(capacity * loadFactor, MAX_ARRAY_SIZE + 1)`.
+        WARNINGS: -Wno-implicit-const-int-float-conversion
+      run: |
+        src="$RUNNER_TEMP/j2objc-src"
+        git clone --depth 1 --branch "$J2OBJC_VERSION" https://github.com/google/j2objc.git "$src"
+        # -k: on failure, report every broken file in one run rather than stopping at the first.
+        make -C "$src" -k -j"$(sysctl -n hw.logicalcpu)" translator_dist jre_emul_dist
+        rm -rf "$J2OBJC_HOME"
+        cp -R "$src/dist" "$J2OBJC_HOME"
+
+    # Saved right away rather than at job end, so a later failing step never forces a rebuild.
+    - name: Save J2ObjC ${{ env.J2OBJC_VERSION }}
+      if: steps.j2objc-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ env.J2OBJC_HOME }}
+        key: ${{ steps.toolchain.outputs.j2objc-cache-key }}
+
+    - name: Verify J2ObjC distribution
+      env:
+        JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+      run: |
+        "$J2OBJC_HOME/j2objc" -version
+        for lib in $J2OBJC_RUNTIME_LIBS; do
+          for sdk in iphone simulator; do
+            echo "$sdk/lib$lib.a: $(lipo -archs "$J2OBJC_HOME/lib/$sdk/lib$lib.a")"
+          done
+        done
+
+    - name: Translate Java sources with J2ObjC
+      env:
+        J2OBJC_JAVA_HOME: ${{ steps.jdk21.outputs.path }}
+      run: ./xcframework/prepare-build.bash
+
+    - name: Build XCFramework
+      run: ./xcframework/build.bash
+
+    - name: Test XCFramework on iOS
+      run: ./xcframework/test.bash
+
+    - name: Package XCFramework
+      run: ditto -c -k --sequesterRsrc --keepParent build/apple/TNoodle.xcframework build/apple/TNoodle.xcframework.zip
+
+    - name: Upload XCFramework
+      uses: actions/upload-artifact@v7
+      with:
+        name: TNoodle.xcframework
+        path: build/apple/TNoodle.xcframework.zip
+        if-no-files-found: error
+
+    - name: Upload test results
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: SmokeTests.xcresult
+        path: build/apple/SmokeTests.xcresult
+        if-no-files-found: ignore

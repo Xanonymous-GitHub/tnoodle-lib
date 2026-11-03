@@ -5,16 +5,30 @@
 #import "org/worldcubeassociation/tnoodle/svglite/Svg.h"
 #import "java/util/Random.h"
 
+// Resolves the Java scrambler for `puzzle`, or nil when the raw value has no
+// `PuzzleRegistry` counterpart (e.g. a header newer than the linked library)
+// or the scrambler could not be instantiated.
+static OrgWorldcubeassociationTnoodleScramblesPuzzle *_Nullable TNoodleScramblerFor(TNoodlePuzzle puzzle) {
+  OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry *reg =
+    OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_fromOrdinal((OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_ORDINAL)puzzle);
+
+  return [reg getScrambler];
+}
+
+static NSString *TNoodleUnsupportedPuzzleError(TNoodlePuzzle puzzle) {
+  return [NSString stringWithFormat:@"<TNoodle error: unsupported puzzle %d>", (int)puzzle];
+}
+
 @implementation TNoodle
 
 + (NSString *)generateWcaScramble:(TNoodlePuzzle)puzzle seed:(int64_t)seed {
   @try {
+    OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = TNoodleScramblerFor(puzzle);
+    if (scrambler == nil) {
+      return TNoodleUnsupportedPuzzleError(puzzle);
+    }
+
     JavaUtilRandom *r = [[JavaUtilRandom alloc] initWithLong:seed];
-
-    OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry *reg =
-      OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_fromOrdinal((OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_ORDINAL)puzzle);
-
-    OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = [reg getScrambler];
 
     return [scrambler generateWcaScrambleWithJavaUtilRandom:r];
   }
@@ -27,10 +41,11 @@
                   scramble:(nullable NSString *)scramble
                colorScheme:(nullable NSString *)colorScheme {
   @try {
-    OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry *reg =
-      OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_fromOrdinal((OrgWorldcubeassociationTnoodleScramblesPuzzleRegistry_ORDINAL)puzzle);
+    OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = TNoodleScramblerFor(puzzle);
+    if (scrambler == nil) {
+      return TNoodleUnsupportedPuzzleError(puzzle);
+    }
 
-    OrgWorldcubeassociationTnoodleScramblesPuzzle *scrambler = [reg getScrambler];
     id<JavaUtilMap> parsedColorScheme = [scrambler parseColorSchemeWithNSString:colorScheme];
 
     if (colorScheme != nil && colorScheme.length > 0 && parsedColorScheme == nil) {

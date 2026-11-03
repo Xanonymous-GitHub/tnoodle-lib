@@ -2,6 +2,7 @@ package org.worldcubeassociation.tnoodle.scrambles;
 
 import org.worldcubeassociation.tnoodle.puzzle.ClockPuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.CubePuzzle;
+import org.worldcubeassociation.tnoodle.puzzle.FaceTurningOctahedronPuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.FourByFourCubePuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.FourByFourRandomTurnsCubePuzzle;
 import org.worldcubeassociation.tnoodle.puzzle.MegaminxPuzzle;
@@ -31,7 +32,8 @@ public enum PuzzleRegistry {
     SQ1(SquareOnePuzzle.class),
     MEGA(MegaminxPuzzle.class),
     CLOCK(ClockPuzzle.class),
-    SKEWB(SkewbPuzzle.class);
+    SKEWB(SkewbPuzzle.class),
+    FTO(FaceTurningOctahedronPuzzle.class);
 
     private final LazySupplier<? extends Puzzle> puzzleSupplier;
 

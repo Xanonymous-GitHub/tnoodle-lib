@@ -2,6 +2,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+// Raw values mirror the ordinals of the Java `PuzzleRegistry` enum.
+// Append new puzzles at the end; never reorder or renumber existing cases.
 typedef NS_ENUM(int32_t, TNoodlePuzzle) {
   TNoodlePuzzleTwo      = 0,
   TNoodlePuzzleThree    = 1,
@@ -19,6 +21,7 @@ typedef NS_ENUM(int32_t, TNoodlePuzzle) {
   TNoodlePuzzleMega     = 13,
   TNoodlePuzzleClock    = 14,
   TNoodlePuzzleSkewb    = 15,
+  TNoodlePuzzleFto      = 16,
 };
 
 @interface TNoodle : NSObject
