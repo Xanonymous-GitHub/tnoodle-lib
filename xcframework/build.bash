@@ -165,7 +165,6 @@ compile_one() {
     exit 1
   fi
 
-  # Hand-written ARC code: always -fobjc-arc, whatever the translated sources use.
   local wrapper_o="$outdir/obj/__tnoodle_wrapper__/TNoodle.o"
   mkdir -p "$(dirname "$wrapper_o")"
 
@@ -174,7 +173,7 @@ compile_one() {
     -DNDEBUG \
     -ffunction-sections -fdata-sections \
     "$minverflag" \
-    -fobjc-arc \
+    "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
     -c "$wrapper_m" -o "$wrapper_o"
@@ -206,7 +205,7 @@ EOF
     -DNDEBUG \
     -ffunction-sections -fdata-sections \
     "$minverflag" \
-    -fobjc-arc \
+    "$arcflag" \
     -isysroot "$(xcrun --sdk "$sdk" --show-sdk-path)" \
     -I"$J2OBJC_HOME/include" -I"$OBJCDIR" -I"$HDRROOT" \
     -c "$forcelink_m" -o "$forcelink_o"
