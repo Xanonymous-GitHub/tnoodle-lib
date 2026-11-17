@@ -42,15 +42,20 @@ class FtoCoord {
 
     //-------------- Move Tables --------------//
 
-    private static int[][] G1_EDGE_MOVES;
-    private static int[][] G1_TRIANGLE_MOVES;
+    //Each table is one flat array: row = state index, column = move.
+    //A row holds a column for every move number the phase can use.
+    private static final int G1_MOVE_COUNT = 16;
+    private static final int G2_MOVE_COUNT = 10;
 
-    private static int[][] G2_TRIANGLE_MOVES;
-    private static int[][] G2_EDGE_MOVES;
-    private static int[][] G2_TRIPLE_MOVES;
+    private static int[] G1_EDGE_MOVES;
+    private static int[] G1_TRIANGLE_MOVES;
 
-    private static int[][] G3_EDGE_MOVES;
-    private static int[][] G3_CORNER_MOVES;
+    private static int[] G2_TRIANGLE_MOVES;
+    private static int[] G2_EDGE_MOVES;
+    private static int[] G2_TRIPLE_MOVES;
+
+    private static int[] G3_EDGE_MOVES;
+    private static int[] G3_CORNER_MOVES;
 
     //-------------- Pruning Tables --------------//
 
@@ -84,7 +89,7 @@ class FtoCoord {
      * @return turned compact g1 edge index
      */
     public static int g1TurnEdges(int idx, int move){
-        return G1_EDGE_MOVES[idx][move];
+        return G1_EDGE_MOVES[idx * G1_MOVE_COUNT + move];
     }
 
     /**
@@ -94,7 +99,7 @@ class FtoCoord {
      * @return turned compact g1 triangle index
      */
     public static int g1TurnTriangles(int idx, int move){
-        return G1_TRIANGLE_MOVES[idx][move];
+        return G1_TRIANGLE_MOVES[idx * G1_MOVE_COUNT + move];
     }
 
     /**
@@ -104,7 +109,7 @@ class FtoCoord {
      * @return turned compact g2 triple index
      */
     public static int g2TurnTriples(int idx, int move){
-        return G2_TRIPLE_MOVES[idx][move];
+        return G2_TRIPLE_MOVES[idx * G2_MOVE_COUNT + move];
     }
 
     /**
@@ -114,7 +119,7 @@ class FtoCoord {
      * @return turned compact g2 edge index
      */
     public static int g2TurnEdges(int idx, int move){
-        return G2_EDGE_MOVES[idx][move];
+        return G2_EDGE_MOVES[idx * G2_MOVE_COUNT + move];
     }
 
     /**
@@ -124,7 +129,7 @@ class FtoCoord {
      * @return turned compact g2 triangle index
      */
     public static int g2TurnTris(int idx, int move){
-        return G2_TRIANGLE_MOVES[idx][move];
+        return G2_TRIANGLE_MOVES[idx * G2_MOVE_COUNT + move];
     }
 
     /**
@@ -134,7 +139,7 @@ class FtoCoord {
      * @return turned compact g3 edge index
      */
     public static int g3TurnEdges(int idx, int move){
-        return G3_EDGE_MOVES[idx][move];
+        return G3_EDGE_MOVES[idx * G2_MOVE_COUNT + move];
     }
 
     /**
@@ -144,7 +149,7 @@ class FtoCoord {
      * @return turned compact g3 corner index
      */
     public static int g3TurnCorners(int idx, int move){
-        return G3_CORNER_MOVES[idx][move];
+        return G3_CORNER_MOVES[idx * G2_MOVE_COUNT + move];
     }
 
     //-------------- Public Pruning Functions --------------//
@@ -325,7 +330,7 @@ class FtoCoord {
             for (int i = 0; i < frontier.size; i++) {
                 int idx = frontier.data[i];
                 for (int move : Search.G3_MOVESET) {
-                    int nextIdx = G2_TRIPLE_MOVES[idx][move];
+                    int nextIdx = G2_TRIPLE_MOVES[idx * G2_MOVE_COUNT + move];
                     if (prun[nextIdx] == -1) {
                         prun[nextIdx] = (byte) (1);
                         next.add(nextIdx);
@@ -364,7 +369,7 @@ class FtoCoord {
             for (int i = 0; i < frontier.size; i++) {
                 int idx = frontier.data[i];
                 for (int move : Search.G2_MOVESET) {
-                    int nextIdx = G2_TRIPLE_MOVES[idx][move];
+                    int nextIdx = G2_TRIPLE_MOVES[idx * G2_MOVE_COUNT + move];
                     if (prun[nextIdx] == -1) {
                         prun[nextIdx] = (byte) (depth + 1);
                         next.add(nextIdx);
@@ -487,116 +492,109 @@ class FtoCoord {
     //-------------- Move Table Generation --------------//
 
     private static void g1InitEdges(){
-        G1_EDGE_MOVES = new int[G1_EDGES_SIZE][16];
+        G1_EDGE_MOVES = new int[G1_EDGES_SIZE * G1_MOVE_COUNT];
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G1_EDGES_SIZE; idx++) {
                 fto.g1SetEdges(idx);
-                int[] locMoves = G1_EDGE_MOVES[idx];
 
                 for (int move : Search.G1_MOVESET) {
                     fto.turnInto(move, turned);
-                    locMoves[move] = turned.g1PackEdges();
+                    G1_EDGE_MOVES[idx * G1_MOVE_COUNT + move] = turned.g1PackEdges();
                 }
         }
     }
 
     private static void g1InitTriangles(){
-        G1_TRIANGLE_MOVES = new int[G1_TRIANGLES_SIZE][16];
+        G1_TRIANGLE_MOVES = new int[G1_TRIANGLES_SIZE * G1_MOVE_COUNT];
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G1_TRIANGLES_SIZE; idx++) {
             fto.g1SetTriangles(idx);
-            int[] moves = G1_TRIANGLE_MOVES[idx];
 
             for (int move : Search.G1_MOVESET) {
                 fto.turnInto(move, turned);
-                moves[move] = turned.g1PackTriangles();
+                G1_TRIANGLE_MOVES[idx * G1_MOVE_COUNT + move] = turned.g1PackTriangles();
             }
         }
     }
 
     private static void g2InitTris(){
-        G2_TRIANGLE_MOVES = new int[G2_TRIANGLES_SIZE][10];
+        G2_TRIANGLE_MOVES = new int[G2_TRIANGLES_SIZE * G2_MOVE_COUNT];
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G2_TRIANGLES_SIZE; idx++) {
             fto.g2SetTriangles(idx);
-            int[] moves = G2_TRIANGLE_MOVES[idx];
 
             for (int move : Search.G2_MOVESET) {
                 fto.turnInto(move, turned);
-                moves[move] = turned.g2PackTriangles();
+                G2_TRIANGLE_MOVES[idx * G2_MOVE_COUNT + move] = turned.g2PackTriangles();
             }
         }
     }
 
     private static void g2InitEdges(){
-        G2_EDGE_MOVES = new int[G2_EDGES_SIZE][10];
+        G2_EDGE_MOVES = new int[G2_EDGES_SIZE * G2_MOVE_COUNT];
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G2_EDGES_SIZE; idx++) {
             fto.g2SetEdges(idx);
-            int[] moves = G2_EDGE_MOVES[idx];
 
             for (int move : Search.G2_MOVESET) {
                 fto.turnInto(move, turned);
-                moves[move] = turned.g2PackEdges();
+                G2_EDGE_MOVES[idx * G2_MOVE_COUNT + move] = turned.g2PackEdges();
             }
         }
     }
 
     private static void g2InitTriples(){
-        G2_TRIPLE_MOVES = new int[G2_TRIPLE_SIZE][10];
+        G2_TRIPLE_MOVES = new int[G2_TRIPLE_SIZE * G2_MOVE_COUNT];
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G2_TRIPLE_SIZE; idx++) {
             fto.g2SetTriples(idx, 0);
-            int[] moves = G2_TRIPLE_MOVES[idx];
 
             for (int move : Search.G2_MOVESET) {
                 fto.turnInto(move, turned);
-                moves[move] = turned.g2PackTriples(0);
+                G2_TRIPLE_MOVES[idx * G2_MOVE_COUNT + move] = turned.g2PackTriples(0);
             }
         }
     }
 
     private static void g3InitEdges(){
-        G3_EDGE_MOVES = new int[G3_EDGE_SIZE][10];
+        G3_EDGE_MOVES = new int[G3_EDGE_SIZE * G2_MOVE_COUNT];
 
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G3_EDGE_SIZE; idx++) {
             fto.g3SetEdges(idx);
-            int[] moves = G3_EDGE_MOVES[idx];
 
             for (int move : Search.G3_MOVESET) {
                 fto.turnInto(move, turned);
-                moves[move] = turned.g3PackEdges();
+                G3_EDGE_MOVES[idx * G2_MOVE_COUNT + move] = turned.g3PackEdges();
             }
         }
     }
 
     private static void g3InitCorners(){
-        G3_CORNER_MOVES = new int[G3_CORNERS_SIZE][10];
+        G3_CORNER_MOVES = new int[G3_CORNERS_SIZE * G2_MOVE_COUNT];
 
         FtoCubie fto = new FtoCubie();
         FtoCubie turned = new FtoCubie();
 
         for (int idx = 0; idx < G3_CORNERS_SIZE; idx++) {
             fto.g3SetCorners(idx);
-            int[] moves = G3_CORNER_MOVES[idx];
 
             for (int move : Search.G3_MOVESET) {
 
                 fto.turnInto(move, turned);
-                moves[move] = turned.g3PackCorners();
+                G3_CORNER_MOVES[idx * G2_MOVE_COUNT + move] = turned.g3PackCorners();
             }
         }
     }
