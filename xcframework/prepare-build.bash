@@ -98,7 +98,7 @@ J2OBJC_STRIP_GWT_INCOMPATIBLE="${J2OBJC_STRIP_GWT_INCOMPATIBLE:-1}"
 # Manual reference counting (J2ObjC's default) by default. ARC output retains and releases
 # every object it reads, which dominates the time of the table-driven puzzle solvers.
 # build.bash picks the matching clang flag from the translated output.
-J2OBJC_USE_ARC="${J2OBJC_USE_ARC:-0}"
+J2OBJC_USE_ARC="${J2OBJC_USE_ARC:-1}"
 
 j2objc_args=(
   -sourcepath "$SOURCEPATH"
