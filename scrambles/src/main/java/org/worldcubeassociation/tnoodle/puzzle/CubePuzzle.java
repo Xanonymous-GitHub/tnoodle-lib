@@ -47,40 +47,37 @@ public class CubePuzzle extends Puzzle {
         this.size = size;
     }
 
-    private static void swap(
-        int[][][] image,
-        int f1, int x1, int y1,
-        int f2, int x2, int y2,
-        int f3, int x3, int y3,
-        int f4, int x4, int y4,
-        int dir
-    ) {
+    // The image is one flat array: face f, row r, column c is at (f * size + r) * size + c.
+    private static int at(int size, int f, int r, int c) {
+        return (f * size + r) * size + c;
+    }
+
+    private static void swap(int[] image, int i1, int i2, int i3, int i4, int dir) {
         if (dir == 1) {
-            int temp = image[f1][x1][y1];
-            image[f1][x1][y1] = image[f2][x2][y2];
-            image[f2][x2][y2] = image[f3][x3][y3];
-            image[f3][x3][y3] = image[f4][x4][y4];
-            image[f4][x4][y4] = temp;
+            int temp = image[i1];
+            image[i1] = image[i2];
+            image[i2] = image[i3];
+            image[i3] = image[i4];
+            image[i4] = temp;
         } else if (dir == 2) {
-            int temp = image[f1][x1][y1];
-            image[f1][x1][y1] = image[f3][x3][y3];
-            image[f3][x3][y3] = temp;
-            temp = image[f2][x2][y2];
-            image[f2][x2][y2] = image[f4][x4][y4];
-            image[f4][x4][y4] = temp;
+            int temp = image[i1];
+            image[i1] = image[i3];
+            image[i3] = temp;
+            temp = image[i2];
+            image[i2] = image[i4];
+            image[i4] = temp;
         } else if (dir == 3) {
-            int temp = image[f4][x4][y4];
-            image[f4][x4][y4] = image[f3][x3][y3];
-            image[f3][x3][y3] = image[f2][x2][y2];
-            image[f2][x2][y2] = image[f1][x1][y1];
-            image[f1][x1][y1] = temp;
+            int temp = image[i4];
+            image[i4] = image[i3];
+            image[i3] = image[i2];
+            image[i2] = image[i1];
+            image[i1] = temp;
         } else {
             assert false;
         }
     }
 
-    private static void slice(Face face, int slice, int dir, int[][][] image) {
-        int size = image[0].length;
+    private static void slice(Face face, int slice, int dir, int size, int[] image) {
         assert slice >= 0 && slice < size;
 
         Face sface = face;
@@ -92,32 +89,34 @@ public class CubePuzzle extends Puzzle {
             sslice = size - 1 - slice;
             sdir = 4 - dir;
         }
+        int u = Face.U.ordinal(), b = Face.B.ordinal(), d = Face.D.ordinal();
+        int f = Face.F.ordinal(), l = Face.L.ordinal(), r = Face.R.ordinal();
         for (int j = 0; j < size; j++) {
             if (sface == Face.L) {
                 swap(
                     image,
-                    Face.U.ordinal(), j, sslice,
-                    Face.B.ordinal(), size - 1 - j, size - 1 - sslice,
-                    Face.D.ordinal(), j, sslice,
-                    Face.F.ordinal(), j, sslice,
+                    at(size, u, j, sslice),
+                    at(size, b, size - 1 - j, size - 1 - sslice),
+                    at(size, d, j, sslice),
+                    at(size, f, j, sslice),
                     sdir
                 );
             } else if (sface == Face.D) {
                 swap(
                     image,
-                    Face.L.ordinal(), size - 1 - sslice, j,
-                    Face.B.ordinal(), size - 1 - sslice, j,
-                    Face.R.ordinal(), size - 1 - sslice, j,
-                    Face.F.ordinal(), size - 1 - sslice, j,
+                    at(size, l, size - 1 - sslice, j),
+                    at(size, b, size - 1 - sslice, j),
+                    at(size, r, size - 1 - sslice, j),
+                    at(size, f, size - 1 - sslice, j),
                     sdir
                 );
             } else if (sface == Face.B) {
                 swap(
                     image,
-                    Face.U.ordinal(), sslice, j,
-                    Face.R.ordinal(), j, size - 1 - sslice,
-                    Face.D.ordinal(), size - 1 - sslice, size - 1 - j,
-                    Face.L.ordinal(), size - 1 - j, sslice,
+                    at(size, u, sslice, j),
+                    at(size, r, j, size - 1 - sslice),
+                    at(size, d, size - 1 - sslice, size - 1 - j),
+                    at(size, l, size - 1 - j, sslice),
                     sdir
                 );
             } else {
@@ -125,12 +124,12 @@ public class CubePuzzle extends Puzzle {
             }
         }
         if (slice == 0 || slice == size - 1) {
-            int f;
+            int face2;
             if (slice == 0) {
-                f = face.ordinal();
+                face2 = face.ordinal();
                 sdir = 4 - dir;
             } else if (slice == size - 1) {
-                f = face.oppositeFace().ordinal();
+                face2 = face.oppositeFace().ordinal();
                 sdir = dir;
             } else {
                 assert false;
@@ -140,10 +139,10 @@ public class CubePuzzle extends Puzzle {
                 for (int k = 0; k < size / 2; k++) {
                     swap(
                         image,
-                        f, j, k,
-                        f, k, size - 1 - j,
-                        f, size - 1 - j, size - 1 - k,
-                        f, size - 1 - k, j,
+                        at(size, face2, j, k),
+                        at(size, face2, k, size - 1 - j),
+                        at(size, face2, size - 1 - j, size - 1 - k),
+                        at(size, face2, size - 1 - k, j),
                         sdir
                     );
                 }
@@ -163,18 +162,18 @@ public class CubePuzzle extends Puzzle {
         return new Dimension(getCubeViewWidth(unitSize, gap, size), getCubeViewHeight(unitSize, gap, size));
     }
 
-    protected static int[][] getStickersByPiece(int[][][] img) {
-        int s = img[0].length - 1;
+    protected static int[][] getStickersByPiece(int[] img, int size) {
+        int s = size - 1;
         return new int[][] {
-            { img[Face.U.ordinal()][s][s], img[Face.R.ordinal()][0][0], img[Face.F.ordinal()][0][s] },
-            { img[Face.U.ordinal()][s][0], img[Face.F.ordinal()][0][0], img[Face.L.ordinal()][0][s] },
-            { img[Face.U.ordinal()][0][s], img[Face.B.ordinal()][0][0], img[Face.R.ordinal()][0][s] },
-            { img[Face.U.ordinal()][0][0], img[Face.L.ordinal()][0][0], img[Face.B.ordinal()][0][s] },
+            { img[at(size, Face.U.ordinal(), s, s)], img[at(size, Face.R.ordinal(), 0, 0)], img[at(size, Face.F.ordinal(), 0, s)] },
+            { img[at(size, Face.U.ordinal(), s, 0)], img[at(size, Face.F.ordinal(), 0, 0)], img[at(size, Face.L.ordinal(), 0, s)] },
+            { img[at(size, Face.U.ordinal(), 0, s)], img[at(size, Face.B.ordinal(), 0, 0)], img[at(size, Face.R.ordinal(), 0, s)] },
+            { img[at(size, Face.U.ordinal(), 0, 0)], img[at(size, Face.L.ordinal(), 0, 0)], img[at(size, Face.B.ordinal(), 0, s)] },
 
-            { img[Face.D.ordinal()][0][s], img[Face.F.ordinal()][s][s], img[Face.R.ordinal()][s][0] },
-            { img[Face.D.ordinal()][0][0], img[Face.L.ordinal()][s][s], img[Face.F.ordinal()][s][0] },
-            { img[Face.D.ordinal()][s][s], img[Face.R.ordinal()][s][s], img[Face.B.ordinal()][s][0] },
-            { img[Face.D.ordinal()][s][0], img[Face.B.ordinal()][s][s], img[Face.L.ordinal()][s][0] }
+            { img[at(size, Face.D.ordinal(), 0, s)], img[at(size, Face.F.ordinal(), s, s)], img[at(size, Face.R.ordinal(), s, 0)] },
+            { img[at(size, Face.D.ordinal(), 0, 0)], img[at(size, Face.L.ordinal(), s, s)], img[at(size, Face.F.ordinal(), s, 0)] },
+            { img[at(size, Face.D.ordinal(), s, s)], img[at(size, Face.R.ordinal(), s, s)], img[at(size, Face.B.ordinal(), s, 0)] },
+            { img[at(size, Face.D.ordinal(), s, 0)], img[at(size, Face.B.ordinal(), s, s)], img[at(size, Face.L.ordinal(), s, 0)] }
         };
     }
 
@@ -231,22 +230,22 @@ public class CubePuzzle extends Puzzle {
         return getImageSize(gap, cubieSize, size);
     }
 
-    private void drawCube(Svg g, int[][][] state, int gap, int cubieSize, Map<String, Color> colorScheme) {
-        paintCubeFace(g, gap, 2 * gap + size * cubieSize, size, cubieSize, state[Face.L.ordinal()], colorScheme);
-        paintCubeFace(g, 2 * gap + size * cubieSize, 3 * gap + 2 * size * cubieSize, size, cubieSize, state[Face.D.ordinal()], colorScheme);
-        paintCubeFace(g, 4 * gap + 3 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.B.ordinal()], colorScheme);
-        paintCubeFace(g, 3 * gap + 2 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.R.ordinal()], colorScheme);
-        paintCubeFace(g, 2 * gap + size * cubieSize, gap, size, cubieSize, state[Face.U.ordinal()], colorScheme);
-        paintCubeFace(g, 2 * gap + size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state[Face.F.ordinal()], colorScheme);
+    private void drawCube(Svg g, int[] state, int gap, int cubieSize, Map<String, Color> colorScheme) {
+        paintCubeFace(g, gap, 2 * gap + size * cubieSize, size, cubieSize, state, Face.L.ordinal(), colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, 3 * gap + 2 * size * cubieSize, size, cubieSize, state, Face.D.ordinal(), colorScheme);
+        paintCubeFace(g, 4 * gap + 3 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state, Face.B.ordinal(), colorScheme);
+        paintCubeFace(g, 3 * gap + 2 * size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state, Face.R.ordinal(), colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, gap, size, cubieSize, state, Face.U.ordinal(), colorScheme);
+        paintCubeFace(g, 2 * gap + size * cubieSize, 2 * gap + size * cubieSize, size, cubieSize, state, Face.F.ordinal(), colorScheme);
     }
 
-    private void paintCubeFace(Svg g, int x, int y, int size, int cubieSize, int[][] faceColors, Map<String, Color> colorScheme) {
+    private void paintCubeFace(Svg g, int x, int y, int size, int cubieSize, int[] state, int face, Map<String, Color> colorScheme) {
         for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
                 int tempx = x + col * cubieSize;
                 int tempy = y + row * cubieSize;
                 Rectangle rect = new Rectangle(tempx, tempy, cubieSize, cubieSize);
-                rect.setFill(colorScheme.get(Face.values()[faceColors[row][col]].toString()));
+                rect.setFill(colorScheme.get(Face.values()[state[at(size, face, row, col)]].toString()));
                 rect.setStroke(Color.BLACK);
                 g.appendChild(rect);
             }
@@ -263,25 +262,19 @@ public class CubePuzzle extends Puzzle {
         return DEFAULT_LENGTHS[size];
     }
 
-    private int[][][] cloneImage(int[][][] image) {
-        int[][][] imageCopy = new int[image.length][image[0].length][image[0][0].length];
-        deepCopy(image, imageCopy);
-        return imageCopy;
-    }
-
-    private void spinCube(int[][][] image, Face face, int dir) {
+    private void spinCube(int[] image, Face face, int dir) {
         for (int slice = 0; slice < size; slice++) {
-            slice(face, slice, dir, image);
+            slice(face, slice, dir, size, image);
         }
     }
 
-    private int[][][] normalize(int[][][] image) {
-        image = cloneImage(image);
+    private int[] normalize(int[] image) {
+        image = image.clone();
 
         int spins = 0;
         while (!isNormalized(image)) {
             assert spins < 2;
-            int[][] stickersByPiece = getStickersByPiece(image);
+            int[][] stickersByPiece = getStickersByPiece(image, size);
 
             int goal = 0;
             goal |= 1 << Face.B.ordinal();
@@ -373,11 +366,11 @@ public class CubePuzzle extends Puzzle {
         return image;
     }
 
-    private boolean isNormalized(int[][][] image) {
+    private boolean isNormalized(int[] image) {
         // A CubeState is normalized if the BLD piece is solved
-        return image[Face.B.ordinal()][size - 1][size - 1] == Face.B.ordinal() &&
-               image[Face.L.ordinal()][size - 1][0] == Face.L.ordinal() &&
-               image[Face.D.ordinal()][size - 1][0] == Face.D.ordinal();
+        return image[at(size, Face.B.ordinal(), size - 1, size - 1)] == Face.B.ordinal() &&
+               image[at(size, Face.L.ordinal(), size - 1, 0)] == Face.L.ordinal() &&
+               image[at(size, Face.D.ordinal(), size - 1, 0)] == Face.D.ordinal();
     }
 
     public enum Face {
@@ -440,22 +433,19 @@ public class CubePuzzle extends Puzzle {
     }
 
     public class CubeState extends PuzzleState {
-        private final int[][][] image;
+        private final int[] image;
         private CubeState normalizedState = null;
 
         public CubeState() {
-            image = new int[6][size][size];
-            for (int face = 0; face < image.length; face++) {
-                for (int j = 0; j < size; j++) {
-                    for (int k = 0; k < size; k++) {
-                        image[face][j][k] = face;
-                    }
-                }
+            int faceSize = size * size;
+            image = new int[6 * faceSize];
+            for (int face = 0; face < 6; face++) {
+                Arrays.fill(image, face * faceSize, (face + 1) * faceSize, face);
             }
             normalizedState = this;
         }
 
-        public CubeState(int[][][] image) {
+        public CubeState(int[] image) {
             this.image = image;
         }
 
@@ -465,7 +455,7 @@ public class CubePuzzle extends Puzzle {
 
         public CubeState getNormalized() {
             if (normalizedState == null) {
-                int[][][] normalizedImage = normalize(image);
+                int[] normalizedImage = normalize(image);
                 normalizedState = new CubeState(normalizedImage);
             }
             return normalizedState;
@@ -474,7 +464,7 @@ public class CubePuzzle extends Puzzle {
         public TwoByTwoState toTwoByTwoState() {
             TwoByTwoState state = new TwoByTwoState();
 
-            int[][] stickersByPiece = getStickersByPiece(image);
+            int[][] stickersByPiece = getStickersByPiece(image, size);
 
             // Here's a clever color value assigning system that gives each piece
             // a unique id just by summing up the values of its stickers.
@@ -543,11 +533,9 @@ public class CubePuzzle extends Puzzle {
             StringBuilder state = new StringBuilder();
             for (char f : "URFDLB".toCharArray()) {
                 Face face = Face.valueOf("" + f);
-                int[][] faceArr = image[face.ordinal()];
-                for (int[] faceState : faceArr) {
-                    for (int piece : faceState) {
-                        state.append(Face.values()[piece].toString());
-                    }
+                int first = at(size, face.ordinal(), 0, 0);
+                for (int i = first; i < first + size * size; i++) {
+                    state.append(Face.values()[image[i]].toString());
                 }
             }
             return state.toString();
@@ -592,9 +580,9 @@ public class CubePuzzle extends Puzzle {
                             continue;
                         }
 
-                        int[][][] imageCopy = cloneImage(image);
+                        int[] imageCopy = image.clone();
                         for (int slice = outerSlice; slice <= innerSlice; slice++) {
-                            slice(face, slice, dir, imageCopy);
+                            slice(face, slice, dir, size, imageCopy);
                         }
                         successors.put(moveStr, new CubeState(imageCopy));
                     }
@@ -606,12 +594,27 @@ public class CubePuzzle extends Puzzle {
 
         @Override
         public boolean equals(Object other) {
-            return Arrays.deepEquals(image, ((CubeState) other).image);
+            return Arrays.equals(image, ((CubeState) other).image);
         }
 
+        // Same value as Arrays.deepHashCode on the former int[6][size][size] image, so
+        // hash-based collections keep their iteration order and scrambles stay the same.
         @Override
         public int hashCode() {
-            return Arrays.deepHashCode(image);
+            int cube = 1;
+            int i = 0;
+            for (int face = 0; face < 6; face++) {
+                int faceHash = 1;
+                for (int row = 0; row < size; row++) {
+                    int rowHash = 1;
+                    for (int col = 0; col < size; col++) {
+                        rowHash = 31 * rowHash + image[i++];
+                    }
+                    faceHash = 31 * faceHash + rowHash;
+                }
+                cube = 31 * cube + faceHash;
+            }
+            return cube;
         }
 
         protected Svg drawScramble(Map<String, Color> colorScheme) {
