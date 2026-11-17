@@ -73,21 +73,19 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
 
     public class FaceTurningOctahedronState extends PuzzleState {
 
-        private final int[][] image = new int[8][9];
+        // Face f, sticker s is at f * 9 + s.
+        private final int[] image;
 
         public FaceTurningOctahedronState(){
+            image = new int[8 * 9];
             for (int face = 0; face < 8; face++) {
-                for (int sticker = 0; sticker < 9; sticker++) {
-                    image[face][sticker] = face;
-                }
+                Arrays.fill(image, face * 9, face * 9 + 9, face);
             }
         }
 
         //Copy Constructor
         public FaceTurningOctahedronState(FaceTurningOctahedronState other){
-            for (int face = 0; face < 8; face++) {
-                System.arraycopy(other.image[face], 0, this.image[face], 0, 9);
-            }
+            image = other.image.clone();
         }
 
         @Override
@@ -117,12 +115,23 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
             }
 
             FaceTurningOctahedronState otherFto = (FaceTurningOctahedronState) other;
-            return Arrays.deepEquals(this.image, otherFto.image);
+            return Arrays.equals(this.image, otherFto.image);
         }
 
+        // Same value as Arrays.deepHashCode on the former int[8][9] image, so
+        // hash-based collections keep their iteration order and scrambles stay the same.
         @Override
         public int hashCode() {
-            return Arrays.deepHashCode(image);
+            int hash = 1;
+            int i = 0;
+            for (int face = 0; face < 8; face++) {
+                int faceHash = 1;
+                for (int sticker = 0; sticker < 9; sticker++) {
+                    faceHash = 31 * faceHash + image[i++];
+                }
+                hash = 31 * hash + faceHash;
+            }
+            return hash;
         }
 
         private double[] rotatePoint(double[] point, double[] center){
@@ -169,7 +178,7 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
             return p;
         }
 
-        private void drawFace(Svg svg, Color[] scheme, int[] stickerColors, boolean rightSide, int direction){
+        private void drawFace(Svg svg, Color[] scheme, int face, boolean rightSide, int direction){
             int m = MARGIN;
 
             //Compute the three outer points of the face based on
@@ -211,7 +220,7 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
             //
             //Mess around with the coordinate system here if you want
             //https://www.desmos.com/calculator/k6k33zuxel
-            int stickerIndex = 0;
+            int stickerIndex = face * 9;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3-i; j++) {
                     double[] point0;
@@ -224,7 +233,7 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
                         point1 = facePoint(a, b, c, i, j+1);
                         point2 = facePoint(a, b, c, i + 1, j + 1);
 
-                        Color color = scheme[stickerColors[stickerIndex++]];
+                        Color color = scheme[image[stickerIndex++]];
 
                         Path sticker = sticker(point0, point1, point2, color);
                         svg.appendChild(sticker);
@@ -234,7 +243,7 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
                     point0 = facePoint(a, b, c, i, j);
                     point1 = facePoint(a, b, c, i+1, j);
                     point2 = facePoint(a, b, c, i, j+1);
-                    Color color = scheme[stickerColors[stickerIndex++]];
+                    Color color = scheme[image[stickerIndex++]];
 
                     Path sticker = sticker(point0, point1, point2, color);
 
@@ -255,7 +264,7 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
             }
 
             for (int face = 0; face < 8; face++) {
-                drawFace(svg, scheme, image[face],
+                drawFace(svg, scheme, face,
                     isFaceRenderedOnRightSide(face),
                     getDrawScrambleFaceRotation(face));
             }
@@ -271,11 +280,12 @@ public class FaceTurningOctahedronPuzzle extends Puzzle {
             return face > 3;
         }
 
-        private void threeCycleStickers(int f1, int s1, int f2, int s2, int f3, int s3, int[][] image) {
-            int temp = image[f3][s3];
-            image[f3][s3] = image[f2][s2];
-            image[f2][s2] = image[f1][s1];
-            image[f1][s1] = temp;
+        private void threeCycleStickers(int f1, int s1, int f2, int s2, int f3, int s3, int[] image) {
+            int i1 = f1 * 9 + s1, i2 = f2 * 9 + s2, i3 = f3 * 9 + s3;
+            int temp = image[i3];
+            image[i3] = image[i2];
+            image[i2] = image[i1];
+            image[i1] = temp;
         }
 
         private void turn(int side, int dir) {
