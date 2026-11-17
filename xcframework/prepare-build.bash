@@ -95,14 +95,22 @@ J2OBJC_STRIP_REFLECTION="${J2OBJC_STRIP_REFLECTION:-0}"
 # Remove @GwtIncompatible-marked methods to shrink output (safe for most non-GWT iOS uses).
 J2OBJC_STRIP_GWT_INCOMPATIBLE="${J2OBJC_STRIP_GWT_INCOMPATIBLE:-1}"
 
+# Manual reference counting (J2ObjC's default) by default. ARC output retains and releases
+# every object it reads, which dominates the time of the table-driven puzzle solvers.
+# build.bash picks the matching clang flag from the translated output.
+J2OBJC_USE_ARC="${J2OBJC_USE_ARC:-0}"
+
 j2objc_args=(
-  -use-arc
   -sourcepath "$SOURCEPATH"
   -d "$OBJCDIR"
 )
 
 if [[ -n "$CLASSPATH" ]]; then
   j2objc_args+=(-classpath "$CLASSPATH")
+fi
+
+if [[ "$J2OBJC_USE_ARC" == "1" ]]; then
+  j2objc_args+=(-use-arc)
 fi
 
 if [[ "$J2OBJC_STRIP_GWT_INCOMPATIBLE" == "1" ]]; then
